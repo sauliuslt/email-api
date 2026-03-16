@@ -1,9 +1,9 @@
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { eq, isNotNull } from 'drizzle-orm';
+import { eq, isNotNull, isNull } from 'drizzle-orm';
+import { env } from '../config/env.js';
 import type { Db } from '../db/connection.js';
 import { domains, ipAddresses, ipPools } from '../db/schema/index.js';
-import { env } from '../config/env.js';
 
 function transportName(ipAddress: string): string {
 	return `transport_${ipAddress.replace(/[.:]/g, '_')}`;
@@ -40,21 +40,21 @@ export async function generatePostfixConfig(db: Db): Promise<{
 		.where(eq(ipPools.isDefault, true))
 		.limit(1);
 
-	const domainsWithoutPools = await db
-		.select({ domainName: domains.name })
-		.from(domains)
-		.where(eq(domains.ipPoolId, defaultPool?.id ?? ''));
+	const domainsWithoutPools = defaultPool
+		? await db.select({ domainName: domains.name }).from(domains).where(isNull(domains.ipPoolId))
+		: [];
 
 	// Combine both sets
 	const allDomainMappings = [
 		...domainsWithPools.map((d) => ({ domainName: d.domainName, poolId: d.poolId! })),
-		...domainsWithoutPools.map((d) => ({ domainName: d.domainName, poolId: defaultPool!.id })),
+		...(defaultPool
+			? domainsWithoutPools.map((d) => ({ domainName: d.domainName, poolId: defaultPool.id }))
+			: []),
 	];
 
 	// Generate sender_transport lines
 	// Each domain maps to the first IP in its pool (Postfix routes by sender domain)
 	const senderLines: string[] = [];
-	const usedTransports = new Set<string>();
 
 	for (const mapping of allDomainMappings) {
 		const ips = poolIps.get(mapping.poolId);
@@ -64,7 +64,6 @@ export async function generatePostfixConfig(db: Db): Promise<{
 		const ip = ips[0]!;
 		const name = transportName(ip.address);
 		senderLines.push(`@${mapping.domainName}\t${name}:`);
-		usedTransports.add(ip.id);
 	}
 
 	// Generate master.cf transport entries for all IPs (not just used ones)
@@ -81,8 +80,8 @@ export async function generatePostfixConfig(db: Db): Promise<{
 	}
 
 	return {
-		senderTransport: senderLines.join('\n') + '\n',
-		masterCfTransports: masterLines.join('\n') + '\n',
+		senderTransport: `${senderLines.join('\n')}\n`,
+		masterCfTransports: `${masterLines.join('\n')}\n`,
 	};
 }
 

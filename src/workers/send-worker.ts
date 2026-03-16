@@ -6,8 +6,46 @@ import { getDb } from '../db/connection.js';
 import { events, domains, ipAddresses, messages } from '../db/schema/index.js';
 import { getRedisConnectionOpts } from '../queues/index.js';
 import type { SendJobData } from '../queues/send-queue.js';
+import { incrementSentCount } from '../services/ip-selector.js';
 import { sendSmtp } from '../services/smtp-transport.js';
 import { checkSpam } from '../services/spam-check.js';
+
+export function getSmtpFailureOutcome(
+	errorMessage: string,
+	attemptsMade: number,
+	attemptsAllowed: number,
+): {
+	status: 'queued' | 'failed' | 'bounced';
+	shouldRetry: boolean;
+	eventType?: 'failed' | 'bounced';
+} {
+	const isBounce =
+		/5\d{2}\s/.test(errorMessage) ||
+		errorMessage.includes('rejected') ||
+		errorMessage.includes('bounced');
+
+	if (isBounce) {
+		return {
+			status: 'bounced',
+			shouldRetry: false,
+			eventType: 'bounced',
+		};
+	}
+
+	const isFinalAttempt = attemptsMade + 1 >= attemptsAllowed;
+	if (isFinalAttempt) {
+		return {
+			status: 'failed',
+			shouldRetry: false,
+			eventType: 'failed',
+		};
+	}
+
+	return {
+		status: 'queued',
+		shouldRetry: true,
+	};
+}
 
 export function createSendWorker(): Worker<SendJobData> {
 	const logger = pino({ level: env().LOG_LEVEL });
@@ -81,19 +119,10 @@ export function createSendWorker(): Worker<SendJobData> {
 					return;
 				}
 
-				// Log spam score even if passed
-				await db.insert(events).values({
-					messageId,
-					type: 'accepted',
-					severity: 'info',
-					recipient: message.to,
-					details: {
-						note: 'Spam check passed',
-						score: spamResult.score,
-						threshold: spamResult.threshold,
-						rules: spamResult.rules,
-					},
-				});
+				logger.info(
+					{ messageId, score: spamResult.score, threshold: spamResult.threshold },
+					'Spam check passed',
+				);
 			} catch (spamErr) {
 				// If spamd is unavailable, log warning but continue sending
 				logger.warn(
@@ -133,40 +162,41 @@ export function createSendWorker(): Worker<SendJobData> {
 					})
 					.where(eq(messages.id, messageId));
 
-				await db.insert(events).values({
-					messageId,
-					type: 'accepted',
-					severity: 'info',
-					recipient: message.to,
-					details: { response: result.response, postfixQueueId },
-				});
+				if (message.ipAddressId) {
+					await incrementSentCount(db, message.ipAddressId);
+				}
 			} catch (err) {
 				const error = err as Error;
 				const errorMsg = error.message || '';
-
-				// Parse SMTP error codes from Nodemailer
-				const isBounce =
-					/5\d{2}\s/.test(errorMsg) ||
-					errorMsg.includes('rejected') ||
-					errorMsg.includes('bounced');
-				const isTemporary = /4\d{2}\s/.test(errorMsg) || errorMsg.includes('Temporary');
-				const status = isBounce ? 'bounced' : isTemporary ? 'failed' : 'failed';
-				const eventType = isBounce ? 'bounced' : 'failed';
+				const attemptsAllowed = job.opts.attempts ?? 1;
+				const outcome = getSmtpFailureOutcome(errorMsg, job.attemptsMade, attemptsAllowed);
 
 				await db
 					.update(messages)
-					.set({ status, updatedAt: new Date() })
+					.set({ status: outcome.status, smtpResponse: errorMsg, updatedAt: new Date() })
 					.where(eq(messages.id, messageId));
 
-				await db.insert(events).values({
-					messageId,
-					type: eventType,
-					severity: 'error',
-					recipient: message.to,
-					details: { error: errorMsg },
-				});
+				if (outcome.eventType) {
+					await db.insert(events).values({
+						messageId,
+						type: outcome.eventType,
+						severity: 'error',
+						recipient: message.to,
+						details: { error: errorMsg },
+					});
+				}
 
-				throw error;
+				if (outcome.shouldRetry) {
+					logger.warn(
+						{ jobId: job.id, messageId, attemptsMade: job.attemptsMade + 1, attemptsAllowed },
+						'SMTP send failed, retrying',
+					);
+					throw error;
+				}
+
+				if (outcome.status === 'failed') {
+					throw error;
+				}
 			}
 		},
 		{

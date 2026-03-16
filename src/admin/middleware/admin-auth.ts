@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 
 declare module 'fastify' {
 	interface Session {
@@ -20,8 +20,4 @@ export async function requireAdmin(request: FastifyRequest, reply: FastifyReply)
 	if (!request.session.get('authenticated')) {
 		return reply.redirect('/admin/login');
 	}
-}
-
-export function registerAuthHooks(app: FastifyInstance) {
-	app.decorateRequest('adminAuthenticated', false);
 }

@@ -1,8 +1,8 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { env } from '../config/env.js';
 import { getDb } from '../db/connection.js';
-import { messages } from '../db/schema/index.js';
+import { domains, messages } from '../db/schema/index.js';
 import { PERMISSIONS, authenticate, authorizeDomain, checkPermission } from '../middleware/auth.js';
 import { sendMessageSchema } from '../middleware/validation.js';
 import { enqueueMessage } from '../services/email-sender.js';
@@ -69,6 +69,16 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
 			if (reply.sent) return;
 
 			const db = getDb();
+			const [domain] = await db
+				.select({ id: domains.id })
+				.from(domains)
+				.where(eq(domains.name, request.params.domain))
+				.limit(1);
+
+			if (!domain) {
+				return reply.code(404).send({ error: 'Domain not found' });
+			}
+
 			const [message] = await db
 				.select({
 					id: messages.id,
@@ -81,7 +91,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
 					updatedAt: messages.updatedAt,
 				})
 				.from(messages)
-				.where(eq(messages.id, request.params.id))
+				.where(and(eq(messages.id, request.params.id), eq(messages.domainId, domain.id)))
 				.limit(1);
 
 			if (!message) {

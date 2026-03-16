@@ -35,7 +35,7 @@ export type WarmupSchedule = InferSelectModel<typeof warmupSchedules>;
 
 export interface SendMessagePayload {
 	from: string;
-	to: string | string[];
+	to: string;
 	subject: string;
 	text?: string;
 	html?: string;

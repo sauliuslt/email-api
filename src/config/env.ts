@@ -1,5 +1,14 @@
 import { z } from 'zod';
 
+const cookieSecureSchema = z.preprocess((value) => {
+	if (value === undefined || value === null || value === '') return undefined;
+	if (value === 'auto') return 'auto';
+	if (value === true || value === false) return value;
+	if (value === 'true') return true;
+	if (value === 'false') return false;
+	return value;
+}, z.union([z.boolean(), z.literal('auto')]).optional());
+
 const envSchema = z
 	.object({
 		PORT: z.coerce.number().default(3000),
@@ -28,22 +37,30 @@ const envSchema = z
 
 		POSTFIX_CONFIG_DIR: z.string().default('./config/postfix'),
 		DNS_RESOLVER: z.string().optional(),
-		COOKIE_SECURE: z.coerce.boolean().default(false),
+		COOKIE_SECURE: cookieSecureSchema,
 		ADMIN_PASSWORD: z.string().min(8).optional(),
 		ADMIN_PASSWORD_HASH: z.string().optional(),
 		SESSION_SECRET: z.string().min(32),
 	})
 	.refine((data) => data.ADMIN_PASSWORD || data.ADMIN_PASSWORD_HASH, {
 		message: 'Either ADMIN_PASSWORD or ADMIN_PASSWORD_HASH must be set',
-	});
+	})
+	.transform((data) => ({
+		...data,
+		COOKIE_SECURE: data.COOKIE_SECURE ?? (data.NODE_ENV === 'production' ? 'auto' : false),
+	}));
 
 export type Env = z.infer<typeof envSchema>;
 
 let _env: Env | null = null;
 
+export function parseEnv(input: NodeJS.ProcessEnv): Env {
+	return envSchema.parse(input);
+}
+
 export function loadEnv(): Env {
 	if (_env) return _env;
-	_env = envSchema.parse(process.env);
+	_env = parseEnv(process.env);
 	return _env;
 }
 

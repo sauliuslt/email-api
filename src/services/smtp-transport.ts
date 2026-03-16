@@ -13,7 +13,6 @@ export function getTransporter(port?: number): Transporter {
 			host: env().SMTP_HOST,
 			port: smtpPort,
 			secure: useTls,
-			...(useTls ? {} : { tls: { rejectUnauthorized: false } }),
 		});
 		transporterCache.set(smtpPort, transporter);
 	}

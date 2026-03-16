@@ -4,7 +4,7 @@ import { events, domains, messages } from '../db/schema/index.js';
 import { getSendQueue } from '../queues/send-queue.js';
 import type { SendMessagePayload } from '../types/index.js';
 import { generateMessageId } from '../utils/message-id.js';
-import { incrementSentCount, selectIpForDomain } from './ip-selector.js';
+import { selectIpForDomain } from './ip-selector.js';
 import { isSuppressed } from './suppression.js';
 
 export async function enqueueMessage(
@@ -19,10 +19,7 @@ export async function enqueueMessage(
 		throw Object.assign(new Error(`Domain '${domainName}' not found`), { statusCode: 404 });
 	}
 
-	const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
-
-	// For now, handle first recipient (batch support later)
-	const to = recipients[0]!;
+	const to = payload.to;
 
 	// Check suppression list
 	const suppressed = await isSuppressed(db, domain.id, to);
@@ -52,11 +49,6 @@ export async function enqueueMessage(
 			ipAddressId: selectedIp?.id ?? null,
 		})
 		.returning();
-
-	// Increment sent count on the selected IP
-	if (selectedIp) {
-		await incrementSentCount(db, selectedIp.id);
-	}
 
 	// Log accepted event
 	await db.insert(events).values({
