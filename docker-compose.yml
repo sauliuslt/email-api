@@ -24,11 +24,12 @@ services:
       retries: 5
 
   email-unbound:
-    image: mvance/unbound:latest
+    build:
+      context: ./docker/unbound
     volumes:
-      - ./docker/unbound/unbound.conf:/opt/unbound/etc/unbound/unbound.conf:ro
+      - ./docker/unbound/unbound.conf:/etc/unbound/unbound.conf:ro
     healthcheck:
-      test: ["CMD", "drill", "@127.0.0.1", "google.com"]
+      test: ["CMD", "dig", "@127.0.0.1", "google.com"]
       interval: 10s
       timeout: 5s
       retries: 3
