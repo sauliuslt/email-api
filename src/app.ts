@@ -22,6 +22,7 @@ export async function buildApp() {
 				transport: { target: 'pino-pretty' },
 			}),
 		},
+		trustProxy: true,
 		bodyLimit: 2 * 1024 * 1024, // 2MB
 	});
 

@@ -53,10 +53,21 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  email-nginx:
+    image: nginx:alpine
+    ports:
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - email-api
+    restart: unless-stopped
+
   email-api:
     build: .
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     env_file: .env
     environment:
       NODE_ENV: production
