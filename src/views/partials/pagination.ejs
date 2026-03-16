@@ -1,0 +1,19 @@
+<% if (pagination.totalPages > 1) { %>
+<nav class="mt-6 flex items-center justify-between">
+  <p class="text-sm text-gray-700">
+    Showing page <span class="font-medium"><%= pagination.page %></span> of <span class="font-medium"><%= pagination.totalPages %></span>
+    (<%= pagination.total %> total)
+  </p>
+  <div class="flex space-x-2">
+    <% if (pagination.page > 1) { %>
+      <a href="<%= baseUrl %>&page=<%= pagination.page - 1 %>" class="px-3 py-1 text-sm border rounded-md hover:bg-gray-50">Previous</a>
+    <% } %>
+    <% for (let i = Math.max(1, pagination.page - 2); i <= Math.min(pagination.totalPages, pagination.page + 2); i++) { %>
+      <a href="<%= baseUrl %>&page=<%= i %>" class="px-3 py-1 text-sm border rounded-md <%= i === pagination.page ? 'bg-gray-900 text-white' : 'hover:bg-gray-50' %>"><%= i %></a>
+    <% } %>
+    <% if (pagination.page < pagination.totalPages) { %>
+      <a href="<%= baseUrl %>&page=<%= pagination.page + 1 %>" class="px-3 py-1 text-sm border rounded-md hover:bg-gray-50">Next</a>
+    <% } %>
+  </div>
+</nav>
+<% } %>

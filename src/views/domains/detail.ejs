@@ -1,0 +1,211 @@
+<%- include('../layouts/main', { title: domain.name, currentPath, flash }) %>
+
+<div class="mb-6">
+  <a href="/admin/domains" class="text-sm text-gray-500 hover:text-gray-700">&larr; Back to Domains</a>
+</div>
+
+<div class="flex items-center justify-between mb-6">
+  <h2 class="text-2xl font-bold text-gray-900"><%= domain.name %></h2>
+  <form method="POST" action="/admin/domains/<%= domain.id %>/delete" class="inline">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button type="submit" data-confirm="Are you sure you want to delete this domain?" class="bg-red-600 text-white px-4 py-2 rounded-md text-sm hover:bg-red-700">Delete Domain</button>
+  </form>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+  <div class="bg-white rounded-lg shadow p-6">
+    <div class="flex items-center justify-between">
+      <p class="text-sm font-medium text-gray-500">SPF</p>
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= domain.spfVerified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %>">
+        <%= domain.spfVerified ? 'Verified' : 'Not Verified' %>
+      </span>
+    </div>
+  </div>
+  <div class="bg-white rounded-lg shadow p-6">
+    <div class="flex items-center justify-between">
+      <p class="text-sm font-medium text-gray-500">DKIM</p>
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= domain.dkimVerified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %>">
+        <%= domain.dkimVerified ? 'Verified' : 'Not Verified' %>
+      </span>
+    </div>
+  </div>
+  <div class="bg-white rounded-lg shadow p-6">
+    <div class="flex items-center justify-between">
+      <p class="text-sm font-medium text-gray-500">DMARC</p>
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= domain.dmarcVerified ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %>">
+        <%= domain.dmarcVerified ? 'Verified' : 'Not Verified' %>
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="mb-6">
+  <form method="POST" action="/admin/domains/<%= domain.id %>/verify" class="inline">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700">Verify DNS Records</button>
+  </form>
+</div>
+
+<div class="bg-white rounded-lg shadow mb-8">
+  <div class="px-6 py-4 border-b">
+    <h3 class="text-lg font-medium text-gray-900">IP Pool Assignment</h3>
+    <p class="text-sm text-gray-500 mt-1">Assign an IP pool for outbound email delivery</p>
+  </div>
+  <div class="px-6 py-4">
+    <form method="POST" action="/admin/domains/<%= domain.id %>/pool" class="flex items-end gap-4">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="flex-1">
+        <label for="poolId" class="block text-sm font-medium text-gray-700 mb-1">IP Pool</label>
+        <select name="poolId" id="poolId" class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+          <option value="">None (use default)</option>
+          <% pools.forEach(function(pool) { %>
+          <option value="<%= pool.id %>" <%= domain.ipPoolId === pool.id ? 'selected' : '' %>><%= pool.name %><%= pool.isDefault ? ' (default)' : '' %></option>
+          <% }); %>
+        </select>
+      </div>
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700">Update</button>
+    </form>
+  </div>
+</div>
+
+<div class="bg-white rounded-lg shadow mb-8">
+  <div class="px-6 py-4 border-b">
+    <h3 class="text-lg font-medium text-gray-900">Send Test Email</h3>
+    <p class="text-sm text-gray-500 mt-1">Send a test email through this domain to verify delivery</p>
+  </div>
+  <div class="px-6 py-4">
+    <form method="POST" action="/admin/domains/<%= domain.id %>/send-test" class="space-y-4">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="test-from" class="block text-sm font-medium text-gray-700 mb-1">From</label>
+          <input type="email" id="test-from" name="from" required value="test@<%= domain.name %>"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+        </div>
+        <div>
+          <label for="test-to" class="block text-sm font-medium text-gray-700 mb-1">To</label>
+          <input type="email" id="test-to" name="to" required placeholder="recipient@example.com"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+        </div>
+      </div>
+      <div>
+        <label for="test-subject" class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+        <input type="text" id="test-subject" name="subject" required value="Test Email from <%= domain.name %>"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+      </div>
+      <div>
+        <label for="test-text" class="block text-sm font-medium text-gray-700 mb-1">Body (plain text)</label>
+        <textarea id="test-text" name="text" rows="3"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">This is a test email sent from <%= domain.name %> via the admin panel.</textarea>
+      </div>
+      <div>
+        <label for="test-html" class="block text-sm font-medium text-gray-700 mb-1">Body (HTML) <span class="text-gray-400">optional</span></label>
+        <textarea id="test-html" name="html" rows="3" placeholder="<p>HTML body...</p>"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"></textarea>
+      </div>
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700">Send Test Email</button>
+    </form>
+  </div>
+</div>
+
+<% var dnsOnly = dnsRecords.filter(function(r) { return r.type !== 'PTR'; }); %>
+<% var ptrOnly = dnsRecords.filter(function(r) { return r.type === 'PTR'; }); %>
+
+<div class="bg-white rounded-lg shadow mb-8">
+  <div class="px-6 py-4 border-b flex items-center justify-between">
+    <div>
+      <h3 class="text-lg font-medium text-gray-900">Required DNS Records</h3>
+      <p class="text-sm text-gray-500 mt-1">Add these records to your DNS provider</p>
+    </div>
+    <button id="copy-all-btn" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+      Copy All
+    </button>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-16"></th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% dnsOnly.forEach(function(record, i) { %>
+        <tr>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"><%= record.type %></span>
+          </td>
+          <td class="px-6 py-4 text-sm text-gray-900 font-mono"><%= record.name %></td>
+          <td class="px-6 py-4 text-sm text-gray-700 font-mono break-all max-w-md">
+            <code id="dns-record-<%= i %>"><%= record.value %></code>
+          </td>
+          <td class="px-6 py-4 text-right whitespace-nowrap">
+            <button data-copy="dns-record-<%= i %>" class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-50" title="Copy value">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            </button>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<% if (ptrOnly.length) { %>
+<div class="bg-white rounded-lg shadow">
+  <div class="px-6 py-4 border-b">
+    <h3 class="text-lg font-medium text-gray-900">Reverse DNS (PTR) Records</h3>
+    <p class="text-sm text-gray-500 mt-1">Request these from your hosting provider &mdash; PTR records are configured by the owner of the IP address, not in your DNS zone</p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hostname</th>
+          <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-16"></th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% ptrOnly.forEach(function(record, i) { %>
+        <tr>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">PTR</span>
+          </td>
+          <td class="px-6 py-4 text-sm text-gray-900 font-mono"><%= record.name %></td>
+          <td class="px-6 py-4 text-sm text-gray-700 font-mono">
+            <code id="ptr-record-<%= i %>"><%= record.value %></code>
+          </td>
+          <td class="px-6 py-4 text-right whitespace-nowrap">
+            <button data-copy="ptr-record-<%= i %>" class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-50" title="Copy value">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            </button>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>
+
+<script>
+document.getElementById('copy-all-btn').addEventListener('click', function() {
+  var records = <%- JSON.stringify(dnsRecords) %>;
+  var text = records.map(function(r) {
+    return 'Type: ' + r.type + '\nName: ' + r.name + '\nValue: ' + r.value;
+  }).join('\n\n');
+  var btn = this;
+  navigator.clipboard.writeText(text).then(function() {
+    var original = btn.innerHTML;
+    btn.textContent = 'Copied!';
+    setTimeout(function() { btn.innerHTML = original; }, 2000);
+  });
+});
+</script>
+
+<%- include('../layouts/footer') %>

@@ -1,0 +1,67 @@
+<%- include('../layouts/main', { title: 'Messages', currentPath, flash }) %>
+
+<h2 class="text-2xl font-bold text-gray-900 mb-6">Messages</h2>
+
+<div class="bg-white rounded-lg shadow p-4 mb-6">
+  <form method="GET" action="/admin/messages" class="flex items-end gap-4 flex-wrap">
+    <div>
+      <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+      <select id="status" name="status" class="px-3 py-2 border border-gray-300 rounded-md text-sm">
+        <option value="">All</option>
+        <% ['queued','sending','delivered','bounced','failed','rejected'].forEach(function(s) { %>
+          <option value="<%= s %>" <%= filters.status === s ? 'selected' : '' %>><%= s %></option>
+        <% }); %>
+      </select>
+    </div>
+    <div>
+      <label for="domain" class="block text-sm font-medium text-gray-700 mb-1">Domain</label>
+      <select id="domain" name="domain" class="px-3 py-2 border border-gray-300 rounded-md text-sm">
+        <option value="">All</option>
+        <% domains.forEach(function(d) { %>
+          <option value="<%= d.id %>" <%= filters.domain === d.id ? 'selected' : '' %>><%= d.name %></option>
+        <% }); %>
+      </select>
+    </div>
+    <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-800">Filter</button>
+    <a href="/admin/messages" class="text-sm text-gray-500 hover:text-gray-700 py-2">Clear</a>
+  </form>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-x-auto">
+  <table class="min-w-full divide-y divide-gray-200">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">From</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">To</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-200">
+      <% if (messages.length === 0) { %>
+        <tr><td colspan="5" class="px-6 py-4 text-sm text-gray-500 text-center">No messages found</td></tr>
+      <% } %>
+      <% messages.forEach(function(m) { %>
+      <tr class="hover:bg-gray-50">
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><%= m.from %></td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><%= m.to %></td>
+        <td class="px-6 py-4 text-sm">
+          <a href="/admin/messages/<%= m.id %>" class="text-blue-600 hover:text-blue-800"><%= m.subject %></a>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+            <% if (m.status === 'delivered') { %>bg-green-100 text-green-800<% } else if (m.status === 'bounced' || m.status === 'failed' || m.status === 'rejected') { %>bg-red-100 text-red-800<% } else if (m.status === 'sending') { %>bg-blue-100 text-blue-800<% } else { %>bg-gray-100 text-gray-800<% } %>
+          "><%= m.status %></span>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= new Date(m.createdAt).toLocaleString() %></td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+<% var baseUrl = '/admin/messages?status=' + (filters.status || '') + '&domain=' + (filters.domain || ''); %>
+<%- include('../partials/pagination', { pagination, baseUrl }) %>
+
+<%- include('../layouts/footer') %>

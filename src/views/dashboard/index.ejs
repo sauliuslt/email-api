@@ -1,0 +1,63 @@
+<%- include('../layouts/main', { title: 'Dashboard', currentPath, flash }) %>
+
+<h2 class="text-2xl font-bold text-gray-900 mb-6">Dashboard</h2>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+  <div class="bg-white rounded-lg shadow p-6">
+    <p class="text-sm text-gray-500">Domains</p>
+    <p class="text-3xl font-bold text-gray-900"><%= stats.domains %></p>
+  </div>
+  <div class="bg-white rounded-lg shadow p-6">
+    <p class="text-sm text-gray-500">Total Messages</p>
+    <p class="text-3xl font-bold text-gray-900"><%= stats.messages %></p>
+  </div>
+  <div class="bg-white rounded-lg shadow p-6">
+    <p class="text-sm text-gray-500">Delivered</p>
+    <p class="text-3xl font-bold text-green-600"><%= stats.statusCounts.delivered || 0 %></p>
+  </div>
+  <div class="bg-white rounded-lg shadow p-6">
+    <p class="text-sm text-gray-500">Bounced / Failed</p>
+    <p class="text-3xl font-bold text-red-600"><%= (stats.statusCounts.bounced || 0) + (stats.statusCounts.failed || 0) %></p>
+  </div>
+</div>
+
+<div class="bg-white rounded-lg shadow">
+  <div class="px-6 py-4 border-b">
+    <h3 class="text-lg font-medium text-gray-900">Recent Events</h3>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Severity</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recipient</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Message</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        <% if (recentEvents.length === 0) { %>
+          <tr><td colspan="5" class="px-6 py-4 text-sm text-gray-500 text-center">No events yet</td></tr>
+        <% } %>
+        <% recentEvents.forEach(function(e) { %>
+        <tr>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+              <% if (e.type === 'delivered') { %>bg-green-100 text-green-800<% } else if (e.type === 'bounced' || e.type === 'failed') { %>bg-red-100 text-red-800<% } else if (e.type === 'complained') { %>bg-yellow-100 text-yellow-800<% } else { %>bg-gray-100 text-gray-800<% } %>
+            "><%= e.type %></span>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= e.severity %></td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><%= e.recipient %></td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= new Date(e.createdAt).toLocaleString() %></td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm">
+            <a href="/admin/messages/<%= e.messageId %>" class="text-blue-600 hover:text-blue-800">View</a>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>

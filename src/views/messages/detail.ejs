@@ -1,0 +1,99 @@
+<%- include('../layouts/main', { title: 'Message Detail', currentPath, flash }) %>
+
+<div class="mb-6">
+  <a href="/admin/messages" class="text-sm text-gray-500 hover:text-gray-700">&larr; Back to Messages</a>
+</div>
+
+<h2 class="text-2xl font-bold text-gray-900 mb-6">Message Detail</h2>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+  <div class="bg-white rounded-lg shadow p-6">
+    <h3 class="text-lg font-medium text-gray-900 mb-4">Metadata</h3>
+    <dl class="space-y-3">
+      <div class="flex justify-between">
+        <dt class="text-sm text-gray-500">Status</dt>
+        <dd>
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+            <% if (message.status === 'delivered') { %>bg-green-100 text-green-800<% } else if (message.status === 'bounced' || message.status === 'failed') { %>bg-red-100 text-red-800<% } else { %>bg-gray-100 text-gray-800<% } %>
+          "><%= message.status %></span>
+        </dd>
+      </div>
+      <div class="flex justify-between">
+        <dt class="text-sm text-gray-500">From</dt>
+        <dd class="text-sm text-gray-900"><%= message.from %></dd>
+      </div>
+      <div class="flex justify-between">
+        <dt class="text-sm text-gray-500">To</dt>
+        <dd class="text-sm text-gray-900"><%= message.to %></dd>
+      </div>
+      <div class="flex justify-between">
+        <dt class="text-sm text-gray-500">Subject</dt>
+        <dd class="text-sm text-gray-900"><%= message.subject %></dd>
+      </div>
+      <div class="flex justify-between">
+        <dt class="text-sm text-gray-500">Domain</dt>
+        <dd class="text-sm text-gray-900"><%= domainName %></dd>
+      </div>
+      <% if (message.messageIdHeader) { %>
+      <div class="flex justify-between">
+        <dt class="text-sm text-gray-500">Message-ID</dt>
+        <dd class="text-sm text-gray-900 font-mono text-xs"><%= message.messageIdHeader %></dd>
+      </div>
+      <% } %>
+      <% if (message.postfixQueueId) { %>
+      <div class="flex justify-between">
+        <dt class="text-sm text-gray-500">Queue ID</dt>
+        <dd class="text-sm text-gray-900 font-mono text-xs"><%= message.postfixQueueId %></dd>
+      </div>
+      <% } %>
+      <% if (message.smtpResponse) { %>
+      <div class="flex justify-between">
+        <dt class="text-sm text-gray-500">SMTP Response</dt>
+        <dd class="text-sm text-gray-900 font-mono text-xs break-all"><%= message.smtpResponse %></dd>
+      </div>
+      <% } %>
+      <div class="flex justify-between">
+        <dt class="text-sm text-gray-500">Created</dt>
+        <dd class="text-sm text-gray-900"><%= new Date(message.createdAt).toLocaleString() %></dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="bg-white rounded-lg shadow p-6">
+    <h3 class="text-lg font-medium text-gray-900 mb-4">Body Preview</h3>
+    <% if (message.htmlBody) { %>
+      <iframe srcdoc="<%- message.htmlBody.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') %>" sandbox="" class="w-full h-64 border rounded"></iframe>
+    <% } else if (message.textBody) { %>
+      <pre class="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 p-4 rounded max-h-64 overflow-auto"><%= message.textBody %></pre>
+    <% } else { %>
+      <p class="text-sm text-gray-500">No body content</p>
+    <% } %>
+  </div>
+</div>
+
+<div class="bg-white rounded-lg shadow">
+  <div class="px-6 py-4 border-b">
+    <h3 class="text-lg font-medium text-gray-900">Events Timeline</h3>
+  </div>
+  <div class="divide-y divide-gray-200">
+    <% if (events.length === 0) { %>
+      <div class="px-6 py-4 text-sm text-gray-500 text-center">No events yet</div>
+    <% } %>
+    <% events.forEach(function(e) { %>
+    <div class="px-6 py-4 flex items-start gap-4">
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-0.5
+        <% if (e.type === 'delivered') { %>bg-green-100 text-green-800<% } else if (e.type === 'bounced' || e.type === 'failed') { %>bg-red-100 text-red-800<% } else { %>bg-gray-100 text-gray-800<% } %>
+      "><%= e.type %></span>
+      <div class="flex-1">
+        <p class="text-sm text-gray-900"><%= e.recipient %></p>
+        <p class="text-xs text-gray-500"><%= new Date(e.createdAt).toLocaleString() %> &middot; <%= e.severity %></p>
+        <% if (e.details && Object.keys(e.details).length > 0) { %>
+          <pre class="text-xs text-gray-500 mt-1 bg-gray-50 rounded p-2"><%= JSON.stringify(e.details, null, 2) %></pre>
+        <% } %>
+      </div>
+    </div>
+    <% }); %>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>

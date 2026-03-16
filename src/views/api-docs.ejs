@@ -1,0 +1,280 @@
+<%- include('./layouts/main', { title: 'API Documentation', currentPath, flash }) %>
+
+<h2 class="text-2xl font-bold text-gray-900 mb-6">API Documentation</h2>
+
+<div class="bg-white rounded-lg shadow p-6 mb-6">
+  <h3 class="text-lg font-medium text-gray-900 mb-2">Base URL</h3>
+  <code class="text-sm bg-gray-100 px-3 py-1.5 rounded block"><%= apiUrl %>/v1</code>
+</div>
+
+<div class="bg-white rounded-lg shadow p-6 mb-6">
+  <h3 class="text-lg font-medium text-gray-900 mb-3">Authentication</h3>
+  <p class="text-sm text-gray-600 mb-3">All API requests require authentication via API key. Two methods are supported:</p>
+  <div class="space-y-3">
+    <div>
+      <p class="text-sm font-medium text-gray-700">Bearer Token</p>
+      <code class="text-sm bg-gray-100 px-3 py-1.5 rounded block mt-1">Authorization: Bearer YOUR_API_KEY</code>
+    </div>
+    <div>
+      <p class="text-sm font-medium text-gray-700">HTTP Basic Auth</p>
+      <code class="text-sm bg-gray-100 px-3 py-1.5 rounded block mt-1">Authorization: Basic base64(api:YOUR_API_KEY)</code>
+    </div>
+  </div>
+  <p class="text-sm text-gray-500 mt-3">Create API keys in the <a href="/admin/api-keys" class="text-blue-600 hover:text-blue-800">API Keys</a> section.</p>
+</div>
+
+<!-- Send Email -->
+<div class="bg-white rounded-lg shadow mb-6">
+  <div class="px-6 py-4 border-b">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">POST</span>
+      <code class="text-sm font-medium text-gray-900">/:domain/messages</code>
+    </div>
+    <p class="text-sm text-gray-500 mt-1">Send an email message. The message is queued and sent asynchronously.</p>
+  </div>
+  <div class="px-6 py-4">
+    <p class="text-xs font-medium text-gray-500 uppercase mb-2">Request Body</p>
+    <pre class="text-sm bg-gray-50 rounded p-4 overflow-x-auto"><code>{
+  "from": "sender@yourdomain.com",
+  "to": "recipient@example.com",
+  "subject": "Hello",
+  "text": "Plain text body",
+  "html": "&lt;p&gt;HTML body&lt;/p&gt;"
+}</code></pre>
+    <div class="mt-3">
+      <table class="w-full text-sm">
+        <thead><tr class="text-left text-gray-500"><th class="pb-2">Field</th><th class="pb-2">Type</th><th class="pb-2">Required</th><th class="pb-2">Description</th></tr></thead>
+        <tbody class="text-gray-700">
+          <tr><td class="py-1 font-mono text-xs">from</td><td>string</td><td>Yes</td><td>Sender email address</td></tr>
+          <tr><td class="py-1 font-mono text-xs">to</td><td>string | string[]</td><td>Yes</td><td>Recipient email address(es)</td></tr>
+          <tr><td class="py-1 font-mono text-xs">subject</td><td>string</td><td>Yes</td><td>Email subject line</td></tr>
+          <tr><td class="py-1 font-mono text-xs">text</td><td>string</td><td>*</td><td>Plain text body</td></tr>
+          <tr><td class="py-1 font-mono text-xs">html</td><td>string</td><td>*</td><td>HTML body</td></tr>
+        </tbody>
+      </table>
+      <p class="text-xs text-gray-500 mt-1">* At least one of <code>text</code> or <code>html</code> is required.</p>
+    </div>
+    <p class="text-xs font-medium text-gray-500 uppercase mt-4 mb-2">Response <span class="text-green-600">202</span></p>
+    <pre class="text-sm bg-gray-50 rounded p-4 overflow-x-auto"><code>{
+  "message": "Queued. Thank you.",
+  "id": "cfe87290-2044-4ce9-8bea-cc8ae0c61974"
+}</code></pre>
+    <p class="text-xs font-medium text-gray-500 uppercase mt-4 mb-2">Example</p>
+    <pre class="text-sm bg-gray-900 text-gray-100 rounded p-4 overflow-x-auto"><code>curl -X POST <%= apiUrl %>/v1/yourdomain.com/messages \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "hello@yourdomain.com",
+    "to": "user@example.com",
+    "subject": "Welcome!",
+    "text": "Thanks for signing up."
+  }'</code></pre>
+  </div>
+</div>
+
+<!-- Get Message Status -->
+<div class="bg-white rounded-lg shadow mb-6">
+  <div class="px-6 py-4 border-b">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800">GET</span>
+      <code class="text-sm font-medium text-gray-900">/:domain/messages/:id</code>
+    </div>
+    <p class="text-sm text-gray-500 mt-1">Get the status and details of a sent message.</p>
+  </div>
+  <div class="px-6 py-4">
+    <p class="text-xs font-medium text-gray-500 uppercase mb-2">Response <span class="text-green-600">200</span></p>
+    <pre class="text-sm bg-gray-50 rounded p-4 overflow-x-auto"><code>{
+  "id": "cfe87290-2044-4ce9-8bea-cc8ae0c61974",
+  "from": "hello@yourdomain.com",
+  "to": "user@example.com",
+  "subject": "Welcome!",
+  "status": "delivered",
+  "messageIdHeader": "&lt;abc123@yourdomain.com&gt;",
+  "createdAt": "2026-03-16T10:00:00.000Z",
+  "updatedAt": "2026-03-16T10:00:05.000Z"
+}</code></pre>
+    <p class="text-xs text-gray-500 mt-2">Status values: <code>queued</code>, <code>sending</code>, <code>delivered</code>, <code>bounced</code>, <code>failed</code>, <code>rejected</code></p>
+  </div>
+</div>
+
+<!-- Events -->
+<div class="bg-white rounded-lg shadow mb-6">
+  <div class="px-6 py-4 border-b">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800">GET</span>
+      <code class="text-sm font-medium text-gray-900">/:domain/events</code>
+    </div>
+    <p class="text-sm text-gray-500 mt-1">List delivery events for a domain with filtering and pagination.</p>
+  </div>
+  <div class="px-6 py-4">
+    <p class="text-xs font-medium text-gray-500 uppercase mb-2">Query Parameters</p>
+    <table class="w-full text-sm">
+      <thead><tr class="text-left text-gray-500"><th class="pb-2">Param</th><th class="pb-2">Type</th><th class="pb-2">Description</th></tr></thead>
+      <tbody class="text-gray-700">
+        <tr><td class="py-1 font-mono text-xs">type</td><td>string</td><td>Filter by event type (delivered, bounced, failed, etc.)</td></tr>
+        <tr><td class="py-1 font-mono text-xs">recipient</td><td>string</td><td>Filter by recipient email</td></tr>
+        <tr><td class="py-1 font-mono text-xs">begin</td><td>ISO date</td><td>Start date filter</td></tr>
+        <tr><td class="py-1 font-mono text-xs">end</td><td>ISO date</td><td>End date filter</td></tr>
+        <tr><td class="py-1 font-mono text-xs">limit</td><td>number</td><td>Page size (default 100, max 300)</td></tr>
+        <tr><td class="py-1 font-mono text-xs">cursor</td><td>string</td><td>Pagination cursor from previous response</td></tr>
+      </tbody>
+    </table>
+    <p class="text-xs font-medium text-gray-500 uppercase mt-4 mb-2">Response <span class="text-green-600">200</span></p>
+    <pre class="text-sm bg-gray-50 rounded p-4 overflow-x-auto"><code>{
+  "items": [
+    {
+      "id": "...",
+      "messageId": "...",
+      "type": "delivered",
+      "severity": "info",
+      "recipient": "user@example.com",
+      "details": { "relay": "mx.example.com", "dsn": "2.0.0" },
+      "createdAt": "2026-03-16T10:00:05.000Z"
+    }
+  ],
+  "paging": { "next": "2026-03-16T09:59:00.000Z" }
+}</code></pre>
+  </div>
+</div>
+
+<!-- Domains -->
+<div class="bg-white rounded-lg shadow mb-6">
+  <div class="px-6 py-4 border-b">
+    <h3 class="text-lg font-medium text-gray-900">Domains</h3>
+  </div>
+  <div class="divide-y divide-gray-200">
+    <div class="px-6 py-4">
+      <div class="flex items-center gap-3 mb-1">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">POST</span>
+        <code class="text-sm font-medium text-gray-900">/domains</code>
+      </div>
+      <p class="text-sm text-gray-500">Add a new sending domain. Returns required DNS records.</p>
+      <pre class="text-sm bg-gray-50 rounded p-3 mt-2 overflow-x-auto"><code>{ "name": "yourdomain.com" }</code></pre>
+    </div>
+    <div class="px-6 py-4">
+      <div class="flex items-center gap-3 mb-1">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800">GET</span>
+        <code class="text-sm font-medium text-gray-900">/domains</code>
+      </div>
+      <p class="text-sm text-gray-500">List all domains with verification status.</p>
+    </div>
+    <div class="px-6 py-4">
+      <div class="flex items-center gap-3 mb-1">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800">GET</span>
+        <code class="text-sm font-medium text-gray-900">/domains/:domain</code>
+      </div>
+      <p class="text-sm text-gray-500">Get domain details including pool assignment and webhook config.</p>
+    </div>
+    <div class="px-6 py-4">
+      <div class="flex items-center gap-3 mb-1">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800">GET</span>
+        <code class="text-sm font-medium text-gray-900">/domains/:domain/dns</code>
+      </div>
+      <p class="text-sm text-gray-500">Get required DNS records (SPF, DKIM, DMARC) for the domain.</p>
+    </div>
+    <div class="px-6 py-4">
+      <div class="flex items-center gap-3 mb-1">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-yellow-100 text-yellow-800">PUT</span>
+        <code class="text-sm font-medium text-gray-900">/domains/:domain/verify</code>
+      </div>
+      <p class="text-sm text-gray-500">Trigger DNS verification for SPF, DKIM, and DMARC records.</p>
+    </div>
+    <div class="px-6 py-4">
+      <div class="flex items-center gap-3 mb-1">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800">DELETE</span>
+        <code class="text-sm font-medium text-gray-900">/domains/:domain</code>
+      </div>
+      <p class="text-sm text-gray-500">Delete a domain and all associated data.</p>
+    </div>
+  </div>
+</div>
+
+<!-- API Keys -->
+<div class="bg-white rounded-lg shadow mb-6">
+  <div class="px-6 py-4 border-b">
+    <h3 class="text-lg font-medium text-gray-900">API Keys</h3>
+  </div>
+  <div class="divide-y divide-gray-200">
+    <div class="px-6 py-4">
+      <div class="flex items-center gap-3 mb-1">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">POST</span>
+        <code class="text-sm font-medium text-gray-900">/keys</code>
+      </div>
+      <p class="text-sm text-gray-500">Create a new API key. The full key is only returned once.</p>
+      <pre class="text-sm bg-gray-50 rounded p-3 mt-2 overflow-x-auto"><code>{ "name": "My App", "domainId": "optional-uuid", "permissions": ["send"] }</code></pre>
+    </div>
+    <div class="px-6 py-4">
+      <div class="flex items-center gap-3 mb-1">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800">GET</span>
+        <code class="text-sm font-medium text-gray-900">/keys</code>
+      </div>
+      <p class="text-sm text-gray-500">List all API keys (key prefixes only, not full keys).</p>
+    </div>
+    <div class="px-6 py-4">
+      <div class="flex items-center gap-3 mb-1">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-yellow-100 text-yellow-800">PATCH</span>
+        <code class="text-sm font-medium text-gray-900">/keys/:id</code>
+      </div>
+      <p class="text-sm text-gray-500">Update name, permissions, or active status of an API key.</p>
+    </div>
+    <div class="px-6 py-4">
+      <div class="flex items-center gap-3 mb-1">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800">DELETE</span>
+        <code class="text-sm font-medium text-gray-900">/keys/:id</code>
+      </div>
+      <p class="text-sm text-gray-500">Delete an API key permanently.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Suppressions -->
+<div class="bg-white rounded-lg shadow mb-6">
+  <div class="px-6 py-4 border-b">
+    <h3 class="text-lg font-medium text-gray-900">Suppressions</h3>
+    <p class="text-sm text-gray-500 mt-1">Manage bounce, unsubscribe, and complaint suppression lists per domain. Types: <code>bounces</code>, <code>unsubscribes</code>, <code>complaints</code></p>
+  </div>
+  <div class="divide-y divide-gray-200">
+    <div class="px-6 py-4">
+      <div class="flex items-center gap-3 mb-1">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800">GET</span>
+        <code class="text-sm font-medium text-gray-900">/:domain/suppressions/:type</code>
+      </div>
+      <p class="text-sm text-gray-500">List suppressions of a given type for a domain.</p>
+    </div>
+    <div class="px-6 py-4">
+      <div class="flex items-center gap-3 mb-1">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800">POST</span>
+        <code class="text-sm font-medium text-gray-900">/:domain/suppressions/:type</code>
+      </div>
+      <p class="text-sm text-gray-500">Add an email to the suppression list.</p>
+      <pre class="text-sm bg-gray-50 rounded p-3 mt-2 overflow-x-auto"><code>{ "email": "user@example.com", "details": "Hard bounce" }</code></pre>
+    </div>
+    <div class="px-6 py-4">
+      <div class="flex items-center gap-3 mb-1">
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800">DELETE</span>
+        <code class="text-sm font-medium text-gray-900">/:domain/suppressions/:type?email=user@example.com</code>
+      </div>
+      <p class="text-sm text-gray-500">Remove an email from the suppression list.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Health -->
+<div class="bg-white rounded-lg shadow mb-6">
+  <div class="px-6 py-4 border-b">
+    <h3 class="text-lg font-medium text-gray-900">Health Check</h3>
+  </div>
+  <div class="px-6 py-4">
+    <div class="flex items-center gap-3 mb-1">
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800">GET</span>
+      <code class="text-sm font-medium text-gray-900">/health</code>
+    </div>
+    <p class="text-sm text-gray-500 mb-2">No authentication required. Returns database and Redis status.</p>
+    <pre class="text-sm bg-gray-50 rounded p-4 overflow-x-auto"><code>{
+  "status": "healthy",
+  "checks": { "database": "ok", "redis": "ok" }
+}</code></pre>
+  </div>
+</div>
+
+<%- include('./layouts/footer') %>

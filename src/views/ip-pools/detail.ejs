@@ -1,0 +1,230 @@
+<%- include('../layouts/main', { title: pool.name, currentPath, flash }) %>
+
+<div class="mb-6">
+  <a href="/admin/ip-pools" class="text-sm text-gray-500 hover:text-gray-700">&larr; Back to IP Pools</a>
+</div>
+
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h2 class="text-2xl font-bold text-gray-900"><%= pool.name %></h2>
+    <% if (pool.isDefault) { %>
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mt-1">Default Pool</span>
+    <% } %>
+  </div>
+  <form method="POST" action="/admin/ip-pools/<%= pool.id %>/delete" class="inline">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button type="submit" data-confirm="Delete this pool and all its IPs?" class="bg-red-600 text-white px-4 py-2 rounded-md text-sm hover:bg-red-700">Delete Pool</button>
+  </form>
+</div>
+
+<div class="mb-6 bg-white rounded-lg shadow p-6">
+  <h3 class="text-lg font-medium text-gray-900 mb-4">Add IP Address</h3>
+  <form method="POST" action="/admin/ip-pools/<%= pool.id %>/ips" class="flex items-end gap-4">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="flex-1">
+      <label for="address" class="block text-sm font-medium text-gray-700 mb-1">IP Address</label>
+      <input type="text" id="address" name="address" required placeholder="192.168.1.1"
+        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+    </div>
+    <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-800">Add IP</button>
+  </form>
+  <p class="text-xs text-gray-500 mt-2">Reverse DNS (PTR record) will be looked up automatically.</p>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-x-auto">
+  <table class="min-w-full divide-y divide-gray-200">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Address</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reverse DNS (PTR)</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Warmup</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sent / Limit</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reputation</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-200">
+      <% if (ips.length === 0) { %>
+        <tr><td colspan="6" class="px-6 py-4 text-sm text-gray-500 text-center">No IP addresses in this pool</td></tr>
+      <% } %>
+      <% ips.forEach(function(ip) { %>
+        <% const ptr = ptrResults[ip.id]; %>
+        <% const hasPtr = ptr && ptr.ptrRecords.length > 0; %>
+        <% const ptrHostname = hasPtr ? ptr.ptrRecords[0].replace(/\.$/, '') : null; %>
+      <tr>
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900"><%= ip.address %></td>
+        <td class="px-6 py-4 text-sm">
+          <% if (ptr && ptr.error) { %>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800"><%= ptr.error %></span>
+          <% } else if (hasPtr) { %>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"><%= ptrHostname %></span>
+          <% } else { %>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">No PTR record</span>
+          <% } %>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Day <%= ip.warmupStage %></td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= ip.sentToday %> / <%= ip.dailyLimit %></td>
+        <td class="px-6 py-4 whitespace-nowrap">
+          <span class="text-sm font-medium <%= Number(ip.reputationScore) >= 80 ? 'text-green-600' : Number(ip.reputationScore) >= 50 ? 'text-yellow-600' : 'text-red-600' %>">
+            <%= ip.reputationScore %>
+          </span>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm space-x-3">
+          <button type="button" class="text-blue-600 hover:text-blue-800 dnsbl-check-btn" data-ip-id="<%= ip.id %>" data-ip-address="<%= ip.address %>">Blocklists</button>
+          <form method="POST" action="/admin/ip-pools/<%= pool.id %>/ips/<%= ip.id %>/delete" class="inline">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" data-confirm="Remove this IP?" class="text-red-600 hover:text-red-800">Remove</button>
+          </form>
+        </td>
+      </tr>
+      <% if (!hasPtr && !(ptr && ptr.error)) { %>
+      <tr>
+        <td colspan="6" class="px-6 py-3 bg-yellow-50">
+          <div class="flex items-start gap-2">
+            <svg class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+            </svg>
+            <div class="text-sm text-yellow-800">
+              <p class="font-medium">No reverse DNS (PTR) record for <%= ip.address %></p>
+              <p class="mt-1">Contact your hosting provider and request a PTR record for <strong><%= ip.address %></strong> pointing to a hostname like <strong>mail.yourdomain.com</strong>. Without reverse DNS, receiving mail servers (Gmail, Outlook, etc.) will reject or spam-flag your emails. Once the PTR is set, this page will detect it automatically.</p>
+            </div>
+          </div>
+        </td>
+      </tr>
+      <% } %>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+<!-- DNSBL Check Modal -->
+<div id="dnsbl-modal" class="hidden fixed inset-0 z-50 overflow-y-auto">
+  <div class="flex items-center justify-center min-h-screen px-4">
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" id="dnsbl-modal-backdrop"></div>
+    <div class="relative bg-white rounded-lg shadow-xl max-w-lg w-full z-10">
+      <div class="px-6 py-4 border-b flex items-center justify-between">
+        <h3 class="text-lg font-medium text-gray-900">
+          Blocklist Check: <span id="dnsbl-modal-ip" class="font-mono"></span>
+        </h3>
+        <button type="button" id="dnsbl-modal-close" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+        </button>
+      </div>
+      <div id="dnsbl-modal-body" class="px-6 py-4">
+        <div id="dnsbl-loading" class="text-center py-8">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          <p class="text-sm text-gray-500 mt-3">Checking blocklists...</p>
+        </div>
+        <div id="dnsbl-results" class="hidden">
+          <div id="dnsbl-summary" class="mb-4 p-3 rounded-md text-sm font-medium"></div>
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Provider</th>
+                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              </tr>
+            </thead>
+            <tbody id="dnsbl-results-body" class="divide-y divide-gray-200"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="px-6 py-3 border-t bg-gray-50 flex justify-between rounded-b-lg">
+        <button type="button" id="dnsbl-refresh-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700">Refresh</button>
+        <button type="button" id="dnsbl-close-btn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-300">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var modal = document.getElementById('dnsbl-modal');
+  var modalIp = document.getElementById('dnsbl-modal-ip');
+  var loading = document.getElementById('dnsbl-loading');
+  var results = document.getElementById('dnsbl-results');
+  var resultsBody = document.getElementById('dnsbl-results-body');
+  var summary = document.getElementById('dnsbl-summary');
+  var currentIpId = null;
+
+  function openModal(ipId, ipAddress) {
+    currentIpId = ipId;
+    modalIp.textContent = ipAddress;
+    modal.classList.remove('hidden');
+    runCheck();
+  }
+
+  function closeModal() {
+    modal.classList.add('hidden');
+    currentIpId = null;
+  }
+
+  function runCheck() {
+    loading.classList.remove('hidden');
+    results.classList.add('hidden');
+    resultsBody.innerHTML = '';
+
+    fetch('/admin/ip-pools/api/dnsbl/' + currentIpId)
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        loading.classList.add('hidden');
+        results.classList.remove('hidden');
+
+        var listedCount = 0;
+        data.results.forEach(function(r) {
+          if (r.listed) listedCount++;
+          var row = document.createElement('tr');
+          row.innerHTML =
+            '<td class="px-4 py-2 text-sm">' +
+              '<a href="' + r.url + '" target="_blank" class="text-blue-600 hover:underline">' + r.name + '</a>' +
+              '<span class="text-xs text-gray-400 ml-1">(' + r.zone + ')</span>' +
+            '</td>' +
+            '<td class="px-4 py-2 text-sm">' +
+              (r.error
+                ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">' + r.error + '</span>'
+                : r.listed
+                  ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">Listed</span>'
+                  : '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Clean</span>'
+              ) +
+            '</td>';
+          resultsBody.appendChild(row);
+        });
+
+        if (listedCount === 0) {
+          summary.className = 'mb-4 p-3 rounded-md text-sm font-medium bg-green-50 text-green-800';
+          summary.textContent = 'Not listed on any blocklist.';
+        } else {
+          summary.className = 'mb-4 p-3 rounded-md text-sm font-medium bg-red-50 text-red-800';
+          summary.textContent = 'Listed on ' + listedCount + ' blocklist' + (listedCount > 1 ? 's' : '') + '. This will impact email deliverability.';
+        }
+      })
+      .catch(function() {
+        loading.classList.add('hidden');
+        results.classList.remove('hidden');
+        summary.className = 'mb-4 p-3 rounded-md text-sm font-medium bg-red-50 text-red-800';
+        summary.textContent = 'Failed to check blocklists. Please try again.';
+      });
+  }
+
+  // Open modal buttons
+  document.querySelectorAll('.dnsbl-check-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      openModal(btn.getAttribute('data-ip-id'), btn.getAttribute('data-ip-address'));
+    });
+  });
+
+  // Close modal
+  document.getElementById('dnsbl-modal-close').addEventListener('click', closeModal);
+  document.getElementById('dnsbl-close-btn').addEventListener('click', closeModal);
+  document.getElementById('dnsbl-modal-backdrop').addEventListener('click', closeModal);
+
+  // Refresh
+  document.getElementById('dnsbl-refresh-btn').addEventListener('click', runCheck);
+
+  // Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
+  });
+})();
+</script>
+
+<%- include('../layouts/footer') %>

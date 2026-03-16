@@ -1,0 +1,110 @@
+<%- include('../layouts/main', { title: 'Suppressions', currentPath, flash }) %>
+
+<div class="flex items-center justify-between mb-6">
+  <h2 class="text-2xl font-bold text-gray-900">Suppressions</h2>
+  <button type="button" data-toggle="add-suppression-form" class="bg-gray-900 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-800">Add Suppression</button>
+</div>
+
+<div id="add-suppression-form" class="hidden mb-6 bg-white rounded-lg shadow p-6">
+  <form method="POST" action="/admin/suppressions" class="space-y-4">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+        <input type="email" id="email" name="email" required placeholder="user@example.com"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+      </div>
+      <div>
+        <label for="domainId" class="block text-sm font-medium text-gray-700 mb-1">Domain</label>
+        <select id="domainId" name="domainId" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+          <option value="">Select domain</option>
+          <% domains.forEach(function(d) { %>
+            <option value="<%= d.id %>"><%= d.name %></option>
+          <% }); %>
+        </select>
+      </div>
+      <div>
+        <label for="reason" class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+        <select id="reason" name="reason" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+          <option value="">Select reason</option>
+          <option value="bounce">Bounce</option>
+          <option value="unsubscribe">Unsubscribe</option>
+          <option value="complaint">Complaint</option>
+        </select>
+      </div>
+    </div>
+    <div>
+      <label for="details" class="block text-sm font-medium text-gray-700 mb-1">Details (optional)</label>
+      <input type="text" id="details" name="details" placeholder="Optional details"
+        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+    </div>
+    <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-800">Add</button>
+  </form>
+</div>
+
+<div class="bg-white rounded-lg shadow p-4 mb-6">
+  <form method="GET" action="/admin/suppressions" class="flex items-end gap-4 flex-wrap">
+    <div>
+      <label for="filter-reason" class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+      <select id="filter-reason" name="reason" class="px-3 py-2 border border-gray-300 rounded-md text-sm">
+        <option value="">All</option>
+        <option value="bounce" <%= filters.reason === 'bounce' ? 'selected' : '' %>>Bounce</option>
+        <option value="unsubscribe" <%= filters.reason === 'unsubscribe' ? 'selected' : '' %>>Unsubscribe</option>
+        <option value="complaint" <%= filters.reason === 'complaint' ? 'selected' : '' %>>Complaint</option>
+      </select>
+    </div>
+    <div>
+      <label for="filter-domain" class="block text-sm font-medium text-gray-700 mb-1">Domain</label>
+      <select id="filter-domain" name="domain" class="px-3 py-2 border border-gray-300 rounded-md text-sm">
+        <option value="">All</option>
+        <% domains.forEach(function(d) { %>
+          <option value="<%= d.id %>" <%= filters.domain === d.id ? 'selected' : '' %>><%= d.name %></option>
+        <% }); %>
+      </select>
+    </div>
+    <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-800">Filter</button>
+    <a href="/admin/suppressions" class="text-sm text-gray-500 hover:text-gray-700 py-2">Clear</a>
+  </form>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-x-auto">
+  <table class="min-w-full divide-y divide-gray-200">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-200">
+      <% if (suppressions.length === 0) { %>
+        <tr><td colspan="5" class="px-6 py-4 text-sm text-gray-500 text-center">No suppressions found</td></tr>
+      <% } %>
+      <% suppressions.forEach(function(s) { %>
+      <tr>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><%= s.email %></td>
+        <td class="px-6 py-4 whitespace-nowrap">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+            <% if (s.reason === 'bounce') { %>bg-red-100 text-red-800<% } else if (s.reason === 'complaint') { %>bg-yellow-100 text-yellow-800<% } else { %>bg-blue-100 text-blue-800<% } %>
+          "><%= s.reason %></span>
+        </td>
+        <td class="px-6 py-4 text-sm text-gray-500"><%= s.details || '—' %></td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= new Date(s.createdAt).toLocaleDateString() %></td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm">
+          <form method="POST" action="/admin/suppressions/<%= s.id %>/delete" class="inline">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" data-confirm="Remove this suppression?" class="text-red-600 hover:text-red-800">Remove</button>
+          </form>
+        </td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+<% var baseUrl = '/admin/suppressions?reason=' + (filters.reason || '') + '&domain=' + (filters.domain || ''); %>
+<%- include('../partials/pagination', { pagination, baseUrl }) %>
+
+<%- include('../layouts/footer') %>

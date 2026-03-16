@@ -1,0 +1,80 @@
+<%- include('../layouts/main', { title: 'API Keys', currentPath, flash }) %>
+
+<div class="flex items-center justify-between mb-6">
+  <h2 class="text-2xl font-bold text-gray-900">API Keys</h2>
+  <button type="button" data-toggle="add-key-form" class="bg-gray-900 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-800">Create API Key</button>
+</div>
+
+<% if (newKey) { %>
+<div class="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+  <p class="text-sm font-medium text-yellow-800 mb-2">Your new API key (copy it now — it won't be shown again):</p>
+  <div class="flex items-center gap-2">
+    <code class="flex-1 bg-white px-3 py-2 rounded border text-sm font-mono" id="new-key-value"><%= newKey %></code>
+    <button type="button" data-copy="new-key-value" class="bg-gray-900 text-white px-3 py-2 rounded-md text-sm hover:bg-gray-800">Copy</button>
+  </div>
+</div>
+<% } %>
+
+<div id="add-key-form" class="hidden mb-6 bg-white rounded-lg shadow p-6">
+  <form method="POST" action="/admin/api-keys" class="space-y-4">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div>
+      <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+      <input type="text" id="name" name="name" required placeholder="My API Key"
+        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+    </div>
+    <div>
+      <label for="domainId" class="block text-sm font-medium text-gray-700 mb-1">Domain (optional)</label>
+      <select id="domainId" name="domainId" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
+        <option value="">All domains (global)</option>
+        <% domains.forEach(function(d) { %>
+          <option value="<%= d.id %>"><%= d.name %></option>
+        <% }); %>
+      </select>
+    </div>
+    <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-800">Create</button>
+  </form>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-x-auto">
+  <table class="min-w-full divide-y divide-gray-200">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prefix</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-200">
+      <% if (keys.length === 0) { %>
+        <tr><td colspan="5" class="px-6 py-4 text-sm text-gray-500 text-center">No API keys yet</td></tr>
+      <% } %>
+      <% keys.forEach(function(k) { %>
+      <tr>
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><%= k.name %></td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono"><%= k.keyPrefix %>...</td>
+        <td class="px-6 py-4 whitespace-nowrap">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= k.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' %>">
+            <%= k.active ? 'Active' : 'Inactive' %>
+          </span>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= new Date(k.createdAt).toLocaleDateString() %></td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+          <form method="POST" action="/admin/api-keys/<%= k.id %>/toggle" class="inline">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" class="text-blue-600 hover:text-blue-800"><%= k.active ? 'Deactivate' : 'Activate' %></button>
+          </form>
+          <form method="POST" action="/admin/api-keys/<%= k.id %>/revoke" class="inline">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" data-confirm="Are you sure you want to revoke this API key?" class="text-red-600 hover:text-red-800">Revoke</button>
+          </form>
+        </td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+<%- include('../layouts/footer') %>

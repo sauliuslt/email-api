@@ -1,0 +1,105 @@
+services:
+  email-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  email-redis:
+    image: redis:7-alpine
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  email-unbound:
+    image: mvance/unbound:latest
+    volumes:
+      - ./docker/unbound/unbound.conf:/opt/unbound/etc/unbound/unbound.conf:ro
+    healthcheck:
+      test: ["CMD", "drill", "@127.0.0.1", "google.com"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  email-spamassassin:
+    image: instantlinux/spamassassin:latest
+    volumes:
+      - ./data/spamassassin:/var/lib/spamassassin
+    restart: unless-stopped
+
+  email-postfix:
+    build:
+      context: ./docker/postfix
+    environment:
+      DNS_RESOLVER: email-unbound
+      API_URL: http://email-api:3000
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
+    volumes:
+      - postfix-config:/etc/postfix/dynamic
+    depends_on:
+      email-unbound:
+        condition: service_healthy
+    restart: unless-stopped
+
+  email-api:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      POSTFIX_CONFIG_DIR: /app/config/postfix
+      DNS_RESOLVER: email-unbound
+    volumes:
+      - postfix-config:/app/config/postfix
+    depends_on:
+      email-postgres:
+        condition: service_healthy
+      email-redis:
+        condition: service_healthy
+      email-postfix:
+        condition: service_started
+      email-unbound:
+        condition: service_healthy
+    restart: unless-stopped
+
+  email-worker:
+    build: .
+    command: ["node", "dist/workers/index.js"]
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      POSTFIX_CONFIG_DIR: /app/config/postfix
+      DNS_RESOLVER: email-unbound
+      SPAMD_HOST: email-spamassassin
+      SPAMD_PORT: 783
+    volumes:
+      - postfix-config:/app/config/postfix
+    depends_on:
+      email-postgres:
+        condition: service_healthy
+      email-redis:
+        condition: service_healthy
+      email-postfix:
+        condition: service_started
+      email-unbound:
+        condition: service_healthy
+      email-spamassassin:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  postfix-config:

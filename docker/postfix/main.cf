@@ -1,0 +1,35 @@
+# Postfix configuration for email-api
+compatibility_level = 3.6
+smtpd_banner = $myhostname ESMTP
+biff = no
+
+# Network
+inet_interfaces = all
+inet_protocols = ipv4
+mynetworks = 172.16.0.0/12, 10.0.0.0/8, 192.168.0.0/16, 127.0.0.0/8
+
+# General
+myhostname = mail.localhost
+mydestination =
+relayhost =
+
+# Accept mail from Docker network (no DNS checks on inbound - we trust mynetworks)
+smtpd_recipient_restrictions = permit_mynetworks, reject_unauth_destination
+smtpd_relay_restrictions = permit_mynetworks, reject_unauth_destination
+
+# Disable chroot for all services (Docker container is already isolated)
+# This ensures Postfix processes can read /etc/resolv.conf directly
+
+# Sender-dependent transport for per-IP routing
+sender_dependent_default_transport_maps = hash:/etc/postfix/dynamic/sender_transport
+
+# TLS outbound
+smtp_tls_security_level = may
+smtp_tls_CApath = /etc/ssl/certs
+
+# Limits
+message_size_limit = 26214400
+mailbox_size_limit = 0
+
+# Logging
+maillog_file = /var/log/postfix.log
