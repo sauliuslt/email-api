@@ -1,5 +1,28 @@
 import { z } from 'zod';
 
+function resolveDatabaseUrl(input: NodeJS.ProcessEnv): string | undefined {
+	const user = input.POSTGRES_USER;
+	const password = input.POSTGRES_PASSWORD;
+	const database = input.POSTGRES_DB;
+	const existingUrl = input.DATABASE_URL;
+
+	if (user && password && database) {
+		if (existingUrl) {
+			const url = new URL(existingUrl);
+			url.username = user;
+			url.password = password;
+			url.pathname = `/${database}`;
+			return url.toString();
+		}
+
+		const host = input.POSTGRES_HOST ?? 'localhost';
+		const port = input.POSTGRES_PORT ?? '5432';
+		return `postgres://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
+	}
+
+	return existingUrl;
+}
+
 const cookieSecureSchema = z.preprocess((value) => {
 	if (value === undefined || value === null || value === '') return undefined;
 	if (value === 'auto') return 'auto';
@@ -55,7 +78,10 @@ export type Env = z.infer<typeof envSchema>;
 let _env: Env | null = null;
 
 export function parseEnv(input: NodeJS.ProcessEnv): Env {
-	return envSchema.parse(input);
+	return envSchema.parse({
+		...input,
+		DATABASE_URL: resolveDatabaseUrl(input),
+	});
 }
 
 export function loadEnv(): Env {

@@ -96,15 +96,25 @@ SESSION_SECRET=generate-a-random-string-at-least-32-characters
 docker compose up -d
 ```
 
-This starts 5 services:
+This starts 7 services:
 
 | Service | Description | Port |
 |---------|-------------|------|
 | `email-postgres` | PostgreSQL 16 database | 5432 |
 | `email-redis` | Redis 7 job queue | 6379 |
+| `email-unbound` | Recursive DNS resolver | 53 |
+| `email-spamassassin` | Spam scoring service | 783 |
 | `email-postfix` | Postfix MTA (mail relay) | 25 |
 | `email-api` | REST API + Admin UI | 3000 |
 | `email-worker` | Background email sender | — |
+
+If `email-api` fails with `password authentication failed for user "emailapi"` on first boot, the most common cause is an existing `./data/postgres` directory initialized with older credentials. Reset the local database volume and rebuild:
+
+```bash
+docker compose down
+rm -rf data/postgres
+docker compose up --build -d
+```
 
 ### 3. Run Migrations and Seed
 

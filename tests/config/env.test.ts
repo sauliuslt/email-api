@@ -43,4 +43,16 @@ describe('parseEnv', () => {
 		expect(parseEnv({ ...baseEnv, COOKIE_SECURE: 'false' }).COOKIE_SECURE).toBe(false);
 		expect(parseEnv({ ...baseEnv, COOKIE_SECURE: 'auto' }).COOKIE_SECURE).toBe('auto');
 	});
+
+	it('uses POSTGRES_* credentials over DATABASE_URL credentials when both are set', () => {
+		const env = parseEnv({
+			...baseEnv,
+			DATABASE_URL: 'postgres://wrong:wrong@email-postgres:5432/wrongdb',
+			POSTGRES_USER: 'emailapi',
+			POSTGRES_PASSWORD: 'emailapi',
+			POSTGRES_DB: 'emailapi',
+		});
+
+		expect(env.DATABASE_URL).toBe('postgres://emailapi:emailapi@email-postgres:5432/emailapi');
+	});
 });
