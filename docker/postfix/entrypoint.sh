@@ -21,50 +21,31 @@ apply_config() {
     fi
 }
 
-# Point Postfix DNS to Unbound resolver for MX lookups
-# Keep Docker's DNS (127.0.0.11) for container name resolution
-if [ -n "$DNS_RESOLVER" ]; then
-    RESOLVER_IP=$(getent hosts "$DNS_RESOLVER" | awk '{print $1}' | head -1)
-    if [ -n "$RESOLVER_IP" ]; then
-        mkdir -p /var/spool/postfix/etc
-        echo "nameserver $RESOLVER_IP" > /var/spool/postfix/etc/resolv.conf
-        cp /etc/resolv.conf /etc/resolv.conf.bak
-        echo "nameserver 127.0.0.11" > /etc/resolv.conf
-        echo "nameserver $RESOLVER_IP" >> /etc/resolv.conf
-        echo "options ndots:0" >> /etc/resolv.conf
-        echo "Using DNS resolver: $DNS_RESOLVER ($RESOLVER_IP)"
+# Configure DNS resolver for Postfix (host network mode — no Docker DNS)
+if [ -n "$DNS_RESOLVER_IP" ]; then
+    RESOLVER_PORT="${DNS_RESOLVER_PORT:-53}"
+    mkdir -p /var/spool/postfix/etc
+    echo "nameserver $DNS_RESOLVER_IP" > /var/spool/postfix/etc/resolv.conf
+    echo "nameserver $DNS_RESOLVER_IP" > /etc/resolv.conf
+    echo "options ndots:0" >> /etc/resolv.conf
+    if [ "$RESOLVER_PORT" != "53" ]; then
+        postconf -e "smtp_dns_resolver_options = nameserver=$DNS_RESOLVER_IP:$RESOLVER_PORT"
     fi
+    echo "Using DNS resolver: $DNS_RESOLVER_IP:$RESOLVER_PORT"
 fi
 
 # Disable chroot for all Postfix services (container is already isolated)
-# This ensures processes can read /etc/resolv.conf for DNS resolution
 sed -i 's/^\([a-z].*\)\(unix\s\+-\s\+-\s\+\)y/\1\2n/' /etc/postfix/master.cf
 sed -i 's/^\([a-z].*\)\(inet\s\+n\s\+-\s\+\)y/\1\2n/' /etc/postfix/master.cf
 
-# Add public IPs from transport config to container's network interface
-# This allows smtp_bind_address to work inside the container
-add_bind_ips() {
-    if [ -f "$CONFIG_DIR/master_transports.cf" ]; then
-        for IP in $(grep -oP 'smtp_bind_address=\K[0-9.]+' "$CONFIG_DIR/master_transports.cf" 2>/dev/null | sort -u); do
-            if ! ip addr show | grep -q "$IP"; then
-                ip addr add "$IP/32" dev eth0 2>/dev/null && echo "Added bind IP: $IP" || echo "Failed to add IP: $IP (may not be routed to this host)"
-            fi
-        done
-    fi
-}
-
 # Apply initial config
 apply_config
-add_bind_ips
 
-# Set myhostname from dynamic config (written by API from DB domains) or env fallback
+# Set myhostname from dynamic config (written by API from DB domains)
 if [ -f "$CONFIG_DIR/myhostname" ]; then
     HOSTNAME_VAL=$(cat "$CONFIG_DIR/myhostname")
     postconf -e "myhostname = $HOSTNAME_VAL"
     echo "Using mail hostname from DB: $HOSTNAME_VAL"
-elif [ -n "$MAIL_HOSTNAME" ]; then
-    postconf -e "myhostname = $MAIL_HOSTNAME"
-    echo "Using mail hostname from env: $MAIL_HOSTNAME"
 fi
 
 # Start Postfix in background
@@ -86,7 +67,6 @@ touch "$CONFIG_DIR/.reload-trigger"
 inotifywait -m -e close_write "$CONFIG_DIR/.reload-trigger" 2>/dev/null | while read -r; do
     echo "Config reload triggered, applying changes..."
     apply_config
-    add_bind_ips
     if [ -f "$CONFIG_DIR/myhostname" ]; then
         postconf -e "myhostname = $(cat "$CONFIG_DIR/myhostname")"
     fi

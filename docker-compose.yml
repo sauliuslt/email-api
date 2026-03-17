@@ -13,6 +13,8 @@ services:
 
   email-redis:
     image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
     volumes:
       - ./data/redis:/data
     healthcheck:
@@ -24,6 +26,9 @@ services:
   email-unbound:
     build:
       context: ./docker/unbound
+    ports:
+      - "127.0.0.1:5353:53/udp"
+      - "127.0.0.1:5353:53/tcp"
     volumes:
       - ./docker/unbound/unbound.conf:/etc/unbound/unbound.conf:ro
     healthcheck:
@@ -35,6 +40,8 @@ services:
 
   email-spamassassin:
     image: instantlinux/spamassassin:latest
+    ports:
+      - "127.0.0.1:783:783"
     volumes:
       - ./data/spamassassin:/var/lib/spamassassin
     restart: unless-stopped
@@ -42,18 +49,14 @@ services:
   email-postfix:
     build:
       context: ./docker/postfix
+    network_mode: host
     environment:
-      DNS_RESOLVER: email-unbound
-      API_URL: http://email-api:3000
+      DNS_RESOLVER_IP: "127.0.0.1"
+      DNS_RESOLVER_PORT: "5353"
+      API_URL: http://127.0.0.1:3000
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
     volumes:
       - postfix-config:/etc/postfix/dynamic
-    depends_on:
-      email-unbound:
-        condition: service_healthy
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
     restart: unless-stopped
 
   email-nginx:
@@ -69,8 +72,8 @@ services:
 
   email-api:
     build: .
-    expose:
-      - "3000"
+    ports:
+      - "127.0.0.1:3000:3000"
     env_file: .env
     environment:
       NODE_ENV: production
@@ -83,8 +86,6 @@ services:
         condition: service_healthy
       email-redis:
         condition: service_healthy
-      email-postfix:
-        condition: service_started
       email-unbound:
         condition: service_healthy
     restart: unless-stopped
@@ -97,21 +98,10 @@ services:
       NODE_ENV: production
       POSTFIX_CONFIG_DIR: /app/config/postfix
       DNS_RESOLVER: email-unbound
-      SPAMD_HOST: email-spamassassin
+      SMTP_HOST: "127.0.0.1"
+      SPAMD_HOST: "127.0.0.1"
       SPAMD_PORT: 783
-    volumes:
-      - postfix-config:/app/config/postfix
-    depends_on:
-      email-mysql:
-        condition: service_healthy
-      email-redis:
-        condition: service_healthy
-      email-postfix:
-        condition: service_started
-      email-unbound:
-        condition: service_healthy
-      email-spamassassin:
-        condition: service_started
+    network_mode: host
     restart: unless-stopped
 
 volumes:
