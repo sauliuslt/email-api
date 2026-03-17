@@ -85,6 +85,13 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  email-postfix-relay:
+    image: alpine/socat
+    command: tcp-listen:25,fork,reuseaddr tcp:host-gateway:25
+    extra_hosts:
+      - "host-gateway:host-gateway"
+    restart: unless-stopped
+
   email-worker:
     build: .
     command: ["node", "dist/workers/index.js"]
@@ -92,8 +99,7 @@ services:
     environment:
       NODE_ENV: production
       POSTFIX_CONFIG_DIR: /app/config/postfix
-    extra_hosts:
-      - "email-postfix:host-gateway"
+      SMTP_HOST: email-postfix-relay
     depends_on:
       email-mysql:
         condition: service_healthy
