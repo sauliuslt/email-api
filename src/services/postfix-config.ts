@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { eq, isNotNull, isNull } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { env } from '../config/env.js';
 import type { Db } from '../db/connection.js';
 import { domains, ipAddresses, ipPools } from '../db/schema/index.js';
