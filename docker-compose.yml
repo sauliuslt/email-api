@@ -2,6 +2,8 @@ services:
   email-mysql:
     image: mysql:8.0
     env_file: .env
+    ports:
+      - "127.0.0.1:3306:3306"
     volumes:
       - ./data/mysql:/var/lib/mysql
     healthcheck:
@@ -97,7 +99,8 @@ services:
     environment:
       NODE_ENV: production
       POSTFIX_CONFIG_DIR: /app/config/postfix
-      DNS_RESOLVER: email-unbound
+      REDIS_URL: redis://127.0.0.1:6379
+      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD}@127.0.0.1:3306/${MYSQL_DATABASE}
       SMTP_HOST: "127.0.0.1"
       SPAMD_HOST: "127.0.0.1"
       SPAMD_PORT: 783
