@@ -48,11 +48,10 @@ describe('parseEnv', () => {
 		const env = parseEnv({
 			...baseEnv,
 			DATABASE_URL: 'postgres://wrong:wrong@email-postgres:5432/wrongdb',
-			POSTGRES_USER: 'emailapi',
 			POSTGRES_PASSWORD: 'emailapi',
 			POSTGRES_DB: 'emailapi',
 		});
 
-		expect(env.DATABASE_URL).toBe('postgres://emailapi:emailapi@email-postgres:5432/emailapi');
+		expect(env.DATABASE_URL).toBe('postgres://postgres:emailapi@email-postgres:5432/emailapi');
 	});
 });

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 function resolveDatabaseUrl(input: NodeJS.ProcessEnv): string | undefined {
-	const user = input.POSTGRES_USER;
+	const user = input.POSTGRES_USER ?? 'postgres';
 	const password = input.POSTGRES_PASSWORD;
 	const database = input.POSTGRES_DB;
 	const existingUrl = input.DATABASE_URL;
