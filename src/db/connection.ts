@@ -1,24 +1,24 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import pg from 'pg';
+import { drizzle } from 'drizzle-orm/mysql2';
+import mysql from 'mysql2/promise';
 import { env } from '../config/env.js';
 import * as schema from './schema/index.js';
 
-let _pool: pg.Pool | null = null;
+let _pool: mysql.Pool | null = null;
 
-export function getPool(): pg.Pool {
+export function getPool(): mysql.Pool {
 	if (!_pool) {
-		_pool = new pg.Pool({
-			connectionString: env().DATABASE_URL,
-			max: 20,
-			idleTimeoutMillis: 30000,
-			connectionTimeoutMillis: 5000,
+		_pool = mysql.createPool({
+			uri: env().DATABASE_URL,
+			waitForConnections: true,
+			connectionLimit: 20,
+			idleTimeout: 30000,
 		});
 	}
 	return _pool;
 }
 
 export function getDb() {
-	return drizzle(getPool(), { schema });
+	return drizzle(getPool(), { schema, mode: 'default' });
 }
 
 export type Db = ReturnType<typeof getDb>;

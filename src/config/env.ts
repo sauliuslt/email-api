@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 function resolveDatabaseUrl(input: NodeJS.ProcessEnv): string | undefined {
-	const user = input.POSTGRES_USER ?? 'postgres';
-	const password = input.POSTGRES_PASSWORD;
-	const database = input.POSTGRES_DB;
+	const user = input.MYSQL_USER ?? 'root';
+	const password = input.MYSQL_ROOT_PASSWORD ?? input.MYSQL_PASSWORD;
+	const database = input.MYSQL_DATABASE;
 	const existingUrl = input.DATABASE_URL;
 
 	if (user && password && database) {
@@ -15,9 +15,9 @@ function resolveDatabaseUrl(input: NodeJS.ProcessEnv): string | undefined {
 			return url.toString();
 		}
 
-		const host = input.POSTGRES_HOST ?? 'localhost';
-		const port = input.POSTGRES_PORT ?? '5432';
-		return `postgres://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
+		const host = input.MYSQL_HOST ?? 'localhost';
+		const port = input.MYSQL_PORT ?? '3306';
+		return `mysql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${database}`;
 	}
 
 	return existingUrl;

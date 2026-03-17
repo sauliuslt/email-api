@@ -6,7 +6,7 @@ const baseEnv = {
 	HOST: '0.0.0.0',
 	NODE_ENV: 'development',
 	LOG_LEVEL: 'info',
-	DATABASE_URL: 'postgres://user:pass@localhost:5432/emailapi',
+	DATABASE_URL: 'mysql://user:pass@localhost:3306/emailapi',
 	REDIS_URL: 'redis://localhost:6379',
 	SMTP_HOST: 'localhost',
 	SMTP_PORT: '25',
@@ -44,14 +44,14 @@ describe('parseEnv', () => {
 		expect(parseEnv({ ...baseEnv, COOKIE_SECURE: 'auto' }).COOKIE_SECURE).toBe('auto');
 	});
 
-	it('uses POSTGRES_* credentials over DATABASE_URL credentials when both are set', () => {
+	it('uses MYSQL_* credentials over DATABASE_URL credentials when both are set', () => {
 		const env = parseEnv({
 			...baseEnv,
-			DATABASE_URL: 'postgres://wrong:wrong@email-postgres:5432/wrongdb',
-			POSTGRES_PASSWORD: 'emailapi',
-			POSTGRES_DB: 'emailapi',
+			DATABASE_URL: 'mysql://wrong:wrong@email-mysql:3306/wrongdb',
+			MYSQL_ROOT_PASSWORD: 'emailapi',
+			MYSQL_DATABASE: 'emailapi',
 		});
 
-		expect(env.DATABASE_URL).toBe('postgres://postgres:emailapi@email-postgres:5432/emailapi');
+		expect(env.DATABASE_URL).toBe('mysql://root:emailapi@email-mysql:3306/emailapi');
 	});
 });

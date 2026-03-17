@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { getDb } from '../db/connection.js';
@@ -32,17 +33,18 @@ export async function apiKeyRoutes(app: FastifyInstance): Promise<void> {
 
 		const { key, prefix, hash } = generateApiKey();
 		const db = getDb();
+		const id = crypto.randomUUID();
 
-		const [created] = await db
-			.insert(apiKeys)
-			.values({
-				name,
-				keyPrefix: prefix,
-				keyHash: hash,
-				domainId: domainId ?? null,
-				permissions: permissions ?? [],
-			})
-			.returning();
+		await db.insert(apiKeys).values({
+			id,
+			name,
+			keyPrefix: prefix,
+			keyHash: hash,
+			domainId: domainId ?? null,
+			permissions: permissions ?? [],
+		});
+
+		const [created] = await db.select().from(apiKeys).where(eq(apiKeys.id, id));
 
 		reply.code(201).send({
 			id: created!.id,
@@ -96,15 +98,20 @@ export async function apiKeyRoutes(app: FastifyInstance): Promise<void> {
 		if (permissions !== undefined) updates.permissions = permissions;
 		if (active !== undefined) updates.active = active;
 
-		const [updated] = await db.update(apiKeys).set(updates).where(eq(apiKeys.id, id)).returning({
-			id: apiKeys.id,
-			name: apiKeys.name,
-			keyPrefix: apiKeys.keyPrefix,
-			domainId: apiKeys.domainId,
-			permissions: apiKeys.permissions,
-			active: apiKeys.active,
-			updatedAt: apiKeys.updatedAt,
-		});
+		await db.update(apiKeys).set(updates).where(eq(apiKeys.id, id));
+
+		const [updated] = await db
+			.select({
+				id: apiKeys.id,
+				name: apiKeys.name,
+				keyPrefix: apiKeys.keyPrefix,
+				domainId: apiKeys.domainId,
+				permissions: apiKeys.permissions,
+				active: apiKeys.active,
+				updatedAt: apiKeys.updatedAt,
+			})
+			.from(apiKeys)
+			.where(eq(apiKeys.id, id));
 
 		if (!updated) {
 			return reply.code(404).send({ error: 'API key not found' });
@@ -122,14 +129,16 @@ export async function apiKeyRoutes(app: FastifyInstance): Promise<void> {
 		const { id } = request.params;
 		const db = getDb();
 
-		const [deleted] = await db
-			.delete(apiKeys)
-			.where(eq(apiKeys.id, id))
-			.returning({ id: apiKeys.id });
+		const [existing] = await db
+			.select({ id: apiKeys.id })
+			.from(apiKeys)
+			.where(eq(apiKeys.id, id));
 
-		if (!deleted) {
+		if (!existing) {
 			return reply.code(404).send({ error: 'API key not found' });
 		}
+
+		await db.delete(apiKeys).where(eq(apiKeys.id, id));
 
 		reply.code(204).send();
 	});

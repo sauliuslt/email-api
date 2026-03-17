@@ -1,19 +1,12 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "mysql",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1773577957512,
-      "tag": "0000_flat_magus",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1773657483837,
-      "tag": "0001_redundant_impossible_man",
+      "version": "5",
+      "when": 1773732877360,
+      "tag": "0000_chubby_doctor_faustus",
       "breakpoints": true
     }
   ]

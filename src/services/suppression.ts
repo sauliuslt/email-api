@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { Db } from '../db/connection.js';
 import { suppressionList } from '../db/schema/index.js';
 
@@ -21,5 +21,5 @@ export async function addSuppression(
 	await db
 		.insert(suppressionList)
 		.values({ domainId, email, reason, details })
-		.onConflictDoNothing();
+		.onDuplicateKeyUpdate({ set: { id: sql`id` } });
 }

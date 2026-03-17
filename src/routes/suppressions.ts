@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { getDb } from '../db/connection.js';
 import { domains, suppressionList } from '../db/schema/index.js';
@@ -100,7 +100,7 @@ export async function suppressionRoutes(app: FastifyInstance): Promise<void> {
 				reason: reason as 'bounce' | 'unsubscribe' | 'complaint',
 				details,
 			})
-			.onConflictDoNothing();
+			.onDuplicateKeyUpdate({ set: { id: sql`id` } });
 
 		reply.code(201).send({ message: 'Suppression added' });
 	});
@@ -132,14 +132,18 @@ export async function suppressionRoutes(app: FastifyInstance): Promise<void> {
 			return reply.code(404).send({ error: 'Domain not found' });
 		}
 
-		const [deleted] = await db
-			.delete(suppressionList)
-			.where(and(eq(suppressionList.domainId, domain.id), eq(suppressionList.email, email)))
-			.returning({ id: suppressionList.id });
+		const [existing] = await db
+			.select({ id: suppressionList.id })
+			.from(suppressionList)
+			.where(and(eq(suppressionList.domainId, domain.id), eq(suppressionList.email, email)));
 
-		if (!deleted) {
+		if (!existing) {
 			return reply.code(404).send({ error: 'Suppression not found' });
 		}
+
+		await db
+			.delete(suppressionList)
+			.where(and(eq(suppressionList.domainId, domain.id), eq(suppressionList.email, email)));
 
 		reply.code(204).send();
 	});

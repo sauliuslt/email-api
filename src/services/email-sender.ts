@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import type { Db } from '../db/connection.js';
 import { events, domains, messages } from '../db/schema/index.js';
@@ -33,26 +34,25 @@ export async function enqueueMessage(
 	const selectedIp = await selectIpForDomain(db, domain.id);
 
 	const messageIdHeader = generateMessageId(domainName);
+	const id = crypto.randomUUID();
 
 	// Insert message record
-	const [message] = await db
-		.insert(messages)
-		.values({
-			domainId: domain.id,
-			from: payload.from,
-			to,
-			subject: payload.subject,
-			textBody: payload.text,
-			htmlBody: payload.html,
-			status: 'queued',
-			messageIdHeader,
-			ipAddressId: selectedIp?.id ?? null,
-		})
-		.returning();
+	await db.insert(messages).values({
+		id,
+		domainId: domain.id,
+		from: payload.from,
+		to,
+		subject: payload.subject,
+		textBody: payload.text,
+		htmlBody: payload.html,
+		status: 'queued',
+		messageIdHeader,
+		ipAddressId: selectedIp?.id ?? null,
+	});
 
 	// Log accepted event
 	await db.insert(events).values({
-		messageId: message!.id,
+		messageId: id,
 		type: 'accepted',
 		severity: 'info',
 		recipient: to,
@@ -61,9 +61,9 @@ export async function enqueueMessage(
 
 	// Enqueue for sending
 	await getSendQueue().add('send', {
-		messageId: message!.id,
+		messageId: id,
 		domainId: domain.id,
 	});
 
-	return { id: message!.id, status: 'queued' };
+	return { id, status: 'queued' };
 }

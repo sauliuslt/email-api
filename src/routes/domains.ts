@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { getDb } from '../db/connection.js';
@@ -25,15 +26,16 @@ export async function domainRoutes(app: FastifyInstance): Promise<void> {
 
 		const db = getDb();
 		const { privateKey, publicKey } = generateDkimKeyPair();
+		const id = crypto.randomUUID();
 
-		const [domain] = await db
-			.insert(domains)
-			.values({
-				name,
-				dkimPrivateKey: privateKey,
-				dkimPublicKey: publicKey,
-			})
-			.returning();
+		await db.insert(domains).values({
+			id,
+			name,
+			dkimPrivateKey: privateKey,
+			dkimPublicKey: publicKey,
+		});
+
+		const [domain] = await db.select().from(domains).where(eq(domains.id, id));
 
 		const dnsRecords = getRequiredDnsRecords(name, domain!.dkimSelector, publicKey);
 
@@ -158,14 +160,16 @@ export async function domainRoutes(app: FastifyInstance): Promise<void> {
 		if (reply.sent) return;
 
 		const db = getDb();
-		const [deleted] = await db
-			.delete(domains)
-			.where(eq(domains.name, request.params.domain))
-			.returning({ id: domains.id });
+		const [existing] = await db
+			.select({ id: domains.id })
+			.from(domains)
+			.where(eq(domains.name, request.params.domain));
 
-		if (!deleted) {
+		if (!existing) {
 			return reply.code(404).send({ error: 'Domain not found' });
 		}
+
+		await db.delete(domains).where(eq(domains.name, request.params.domain));
 
 		reply.code(204).send();
 	});

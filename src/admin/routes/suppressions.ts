@@ -1,4 +1,4 @@
-import { and, count, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { getDb } from '../../db/connection.js';
 import { domains, suppressionList } from '../../db/schema/index.js';
@@ -79,7 +79,7 @@ export async function suppressionRoutes(app: FastifyInstance) {
 					domainId,
 					reason: reason as 'bounce' | 'unsubscribe' | 'complaint',
 					details: details || null,
-				}).onConflictDoNothing();
+				}).onDuplicateKeyUpdate({ set: { id: sql`id` } });
 
 				request.session.set('flash', { type: 'success', message: `Suppression added for ${email}` });
 			} catch {

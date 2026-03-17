@@ -46,8 +46,7 @@ async function seed() {
 		await db
 			.insert(warmupSchedules)
 			.values(entry)
-			.onConflictDoUpdate({
-				target: warmupSchedules.day,
+			.onDuplicateKeyUpdate({
 				set: { dailyLimit: entry.dailyLimit },
 			});
 	}
