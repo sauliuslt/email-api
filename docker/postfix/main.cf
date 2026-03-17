@@ -4,7 +4,7 @@ smtpd_banner = $myhostname ESMTP
 biff = no
 
 # Network
-inet_interfaces = all
+inet_interfaces = loopback-only
 inet_protocols = ipv4
 mynetworks = 172.16.0.0/12, 10.0.0.0/8, 192.168.0.0/16, 127.0.0.0/8
 

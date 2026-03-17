@@ -60,9 +60,9 @@ describe('generatePostfixConfig', () => {
 		expect(config.senderTransport).toContain('@assigned.example\ttransport_assigned_example:');
 		expect(config.senderTransport).toContain('@default.example\ttransport_default_example:');
 
-		// Per-domain HELO uses IP hostname when available
-		expect(config.masterCfTransports).toContain('smtp_helo_name=mail.assigned.example');
-		expect(config.masterCfTransports).toContain('smtp_helo_name=mail.default.example');
+		// Per-domain HELO uses the domain name
+		expect(config.masterCfTransports).toContain('smtp_helo_name=assigned.example');
+		expect(config.masterCfTransports).toContain('smtp_helo_name=default.example');
 
 		// IP binding for domains with pools
 		expect(config.masterCfTransports).toContain('smtp_bind_address=203.0.113.20');

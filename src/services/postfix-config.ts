@@ -56,7 +56,7 @@ export async function generatePostfixConfig(db: Db): Promise<{
 
 		if (!seenTransports.has(name)) {
 			seenTransports.add(name);
-			const helo = ip?.hostname || domain.name;
+			const helo = domain.name;
 			const bindAddr = ip ? `\n  -o smtp_bind_address=${ip.address}` : '';
 			masterLines.push(
 				`${name}    unix  -       -       n       -       -       smtp${bindAddr}`,

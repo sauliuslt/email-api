@@ -21,20 +21,29 @@ apply_config() {
     fi
 }
 
-# Point Postfix DNS to Unbound resolver for MX lookups
-# Keep Docker's DNS (127.0.0.11) for container name resolution
+# Point Postfix DNS to resolver for MX lookups
 if [ -n "$DNS_RESOLVER" ]; then
-    RESOLVER_IP=$(getent hosts "$DNS_RESOLVER" | awk '{print $1}' | head -1)
+    # Support "IP port PORT" format (e.g. "127.0.0.1 port 5353")
+    RESOLVER_IP=$(echo "$DNS_RESOLVER" | awk '{print $1}')
+    RESOLVER_PORT=$(echo "$DNS_RESOLVER" | awk '/port/{print $3}')
+
+    # If it's a hostname, resolve it first
+    if ! echo "$RESOLVER_IP" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then
+        RESOLVER_IP=$(getent hosts "$RESOLVER_IP" | awk '{print $1}' | head -1)
+    fi
+
     if [ -n "$RESOLVER_IP" ]; then
-        # Postfix gets Unbound for external DNS
         mkdir -p /var/spool/postfix/etc
-        echo "nameserver $RESOLVER_IP" > /var/spool/postfix/etc/resolv.conf
-        # System keeps Docker DNS + Unbound for both internal and external resolution
-        cp /etc/resolv.conf /etc/resolv.conf.bak
-        echo "nameserver 127.0.0.11" > /etc/resolv.conf
-        echo "nameserver $RESOLVER_IP" >> /etc/resolv.conf
+        if [ -n "$RESOLVER_PORT" ] && [ "$RESOLVER_PORT" != "53" ]; then
+            # Non-standard port: configure Postfix to use it directly
+            postconf -e "smtp_dns_resolver_options = nameserver=$RESOLVER_IP:$RESOLVER_PORT"
+            echo "nameserver $RESOLVER_IP" > /var/spool/postfix/etc/resolv.conf
+        else
+            echo "nameserver $RESOLVER_IP" > /var/spool/postfix/etc/resolv.conf
+        fi
+        echo "nameserver $RESOLVER_IP" > /etc/resolv.conf
         echo "options ndots:0" >> /etc/resolv.conf
-        echo "Using DNS resolver: $DNS_RESOLVER ($RESOLVER_IP)"
+        echo "Using DNS resolver: $RESOLVER_IP${RESOLVER_PORT:+ port $RESOLVER_PORT}"
     fi
 fi
 
