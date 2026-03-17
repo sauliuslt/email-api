@@ -44,7 +44,7 @@ const envSchema = z
 
 		SMTP_HOST: z.string().default('localhost'),
 		SMTP_PORT: z.coerce.number().default(25),
-		SMTP_TLS: z.coerce.boolean().default(false),
+		SMTP_TLS: z.preprocess((v) => v === 'true' || v === true, z.boolean()).default(false),
 
 		SPAMD_HOST: z.string().default('localhost'),
 		SPAMD_PORT: z.coerce.number().default(783),
