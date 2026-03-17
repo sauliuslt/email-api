@@ -21,29 +21,18 @@ apply_config() {
     fi
 }
 
-# Point Postfix DNS to resolver for MX lookups
+# Point Postfix DNS to Unbound resolver for MX lookups
+# Keep Docker's DNS (127.0.0.11) for container name resolution
 if [ -n "$DNS_RESOLVER" ]; then
-    # Support "IP port PORT" format (e.g. "127.0.0.1 port 5353")
-    RESOLVER_IP=$(echo "$DNS_RESOLVER" | awk '{print $1}')
-    RESOLVER_PORT=$(echo "$DNS_RESOLVER" | awk '/port/{print $3}')
-
-    # If it's a hostname, resolve it first
-    if ! echo "$RESOLVER_IP" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$'; then
-        RESOLVER_IP=$(getent hosts "$RESOLVER_IP" | awk '{print $1}' | head -1)
-    fi
-
+    RESOLVER_IP=$(getent hosts "$DNS_RESOLVER" | awk '{print $1}' | head -1)
     if [ -n "$RESOLVER_IP" ]; then
         mkdir -p /var/spool/postfix/etc
-        if [ -n "$RESOLVER_PORT" ] && [ "$RESOLVER_PORT" != "53" ]; then
-            # Non-standard port: configure Postfix to use it directly
-            postconf -e "smtp_dns_resolver_options = nameserver=$RESOLVER_IP:$RESOLVER_PORT"
-            echo "nameserver $RESOLVER_IP" > /var/spool/postfix/etc/resolv.conf
-        else
-            echo "nameserver $RESOLVER_IP" > /var/spool/postfix/etc/resolv.conf
-        fi
-        echo "nameserver $RESOLVER_IP" > /etc/resolv.conf
+        echo "nameserver $RESOLVER_IP" > /var/spool/postfix/etc/resolv.conf
+        cp /etc/resolv.conf /etc/resolv.conf.bak
+        echo "nameserver 127.0.0.11" > /etc/resolv.conf
+        echo "nameserver $RESOLVER_IP" >> /etc/resolv.conf
         echo "options ndots:0" >> /etc/resolv.conf
-        echo "Using DNS resolver: $RESOLVER_IP${RESOLVER_PORT:+ port $RESOLVER_PORT}"
+        echo "Using DNS resolver: $DNS_RESOLVER ($RESOLVER_IP)"
     fi
 fi
 
@@ -52,8 +41,21 @@ fi
 sed -i 's/^\([a-z].*\)\(unix\s\+-\s\+-\s\+\)y/\1\2n/' /etc/postfix/master.cf
 sed -i 's/^\([a-z].*\)\(inet\s\+n\s\+-\s\+\)y/\1\2n/' /etc/postfix/master.cf
 
+# Add public IPs from transport config to container's network interface
+# This allows smtp_bind_address to work inside the container
+add_bind_ips() {
+    if [ -f "$CONFIG_DIR/master_transports.cf" ]; then
+        for IP in $(grep -oP 'smtp_bind_address=\K[0-9.]+' "$CONFIG_DIR/master_transports.cf" 2>/dev/null | sort -u); do
+            if ! ip addr show | grep -q "$IP"; then
+                ip addr add "$IP/32" dev eth0 2>/dev/null && echo "Added bind IP: $IP" || echo "Failed to add IP: $IP (may not be routed to this host)"
+            fi
+        done
+    fi
+}
+
 # Apply initial config
 apply_config
+add_bind_ips
 
 # Set myhostname from dynamic config (written by API from DB domains) or env fallback
 if [ -f "$CONFIG_DIR/myhostname" ]; then
@@ -84,6 +86,7 @@ touch "$CONFIG_DIR/.reload-trigger"
 inotifywait -m -e close_write "$CONFIG_DIR/.reload-trigger" 2>/dev/null | while read -r; do
     echo "Config reload triggered, applying changes..."
     apply_config
+    add_bind_ips
     if [ -f "$CONFIG_DIR/myhostname" ]; then
         postconf -e "myhostname = $(cat "$CONFIG_DIR/myhostname")"
     fi
