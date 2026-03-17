@@ -43,14 +43,18 @@ fi
 sed -i 's/^\([a-z].*\)\(unix\s\+-\s\+-\s\+\)y/\1\2n/' /etc/postfix/master.cf
 sed -i 's/^\([a-z].*\)\(inet\s\+n\s\+-\s\+\)y/\1\2n/' /etc/postfix/master.cf
 
-# Set mail hostname from env (used in SMTP HELO/EHLO)
-if [ -n "$MAIL_HOSTNAME" ]; then
-    postconf -e "myhostname = $MAIL_HOSTNAME"
-    echo "Using mail hostname: $MAIL_HOSTNAME"
-fi
-
 # Apply initial config
 apply_config
+
+# Set myhostname from dynamic config (written by API from DB domains) or env fallback
+if [ -f "$CONFIG_DIR/myhostname" ]; then
+    HOSTNAME_VAL=$(cat "$CONFIG_DIR/myhostname")
+    postconf -e "myhostname = $HOSTNAME_VAL"
+    echo "Using mail hostname from DB: $HOSTNAME_VAL"
+elif [ -n "$MAIL_HOSTNAME" ]; then
+    postconf -e "myhostname = $MAIL_HOSTNAME"
+    echo "Using mail hostname from env: $MAIL_HOSTNAME"
+fi
 
 # Start Postfix in background
 touch /var/log/postfix.log
@@ -71,6 +75,9 @@ touch "$CONFIG_DIR/.reload-trigger"
 inotifywait -m -e close_write "$CONFIG_DIR/.reload-trigger" 2>/dev/null | while read -r; do
     echo "Config reload triggered, applying changes..."
     apply_config
+    if [ -f "$CONFIG_DIR/myhostname" ]; then
+        postconf -e "myhostname = $(cat "$CONFIG_DIR/myhostname")"
+    fi
     postfix reload 2>/dev/null || true
     echo "Postfix reloaded."
 done

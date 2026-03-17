@@ -5,27 +5,27 @@ import { env } from '../config/env.js';
 import type { Db } from '../db/connection.js';
 import { domains, ipAddresses, ipPools } from '../db/schema/index.js';
 
-function transportName(ipAddress: string): string {
-	return `transport_${ipAddress.replace(/[.:]/g, '_')}`;
+function transportName(identifier: string): string {
+	return `transport_${identifier.replace(/[.:@-]/g, '_')}`;
 }
 
 export async function generatePostfixConfig(db: Db): Promise<{
 	senderTransport: string;
 	masterCfTransports: string;
+	myhostname: string | null;
 }> {
-	// Get all domains with assigned pools
-	const domainsWithPools = await db
+	// Get ALL domains
+	const allDomains = await db
 		.select({
-			domainName: domains.name,
-			poolId: domains.ipPoolId,
+			id: domains.id,
+			name: domains.name,
+			ipPoolId: domains.ipPoolId,
 		})
-		.from(domains)
-		.where(isNotNull(domains.ipPoolId));
+		.from(domains);
 
 	// Get all IPs grouped by pool
 	const allIps = await db.select().from(ipAddresses);
 
-	// Build a map of poolId → IPs
 	const poolIps = new Map<string, typeof allIps>();
 	for (const ip of allIps) {
 		const list = poolIps.get(ip.poolId) ?? [];
@@ -33,68 +33,46 @@ export async function generatePostfixConfig(db: Db): Promise<{
 		poolIps.set(ip.poolId, list);
 	}
 
-	// Also get the default pool for domains without explicit assignment
+	// Get default pool
 	const [defaultPool] = await db
 		.select({ id: ipPools.id })
 		.from(ipPools)
 		.where(eq(ipPools.isDefault, true))
 		.limit(1);
 
-	const domainsWithoutPools = defaultPool
-		? await db.select({ domainName: domains.name }).from(domains).where(isNull(domains.ipPoolId))
-		: [];
-
-	// Combine both sets
-	const allDomainMappings = [
-		...domainsWithPools.map((d) => ({ domainName: d.domainName, poolId: d.poolId! })),
-		...(defaultPool
-			? domainsWithoutPools.map((d) => ({ domainName: d.domainName, poolId: defaultPool.id }))
-			: []),
-	];
-
-	// Generate sender_transport lines
-	// Each domain maps to the first IP in its pool (Postfix routes by sender domain)
+	// For each domain, resolve its IP and generate a transport
 	const senderLines: string[] = [];
+	const masterLines: string[] = [];
+	const seenTransports = new Set<string>();
 
-	for (const mapping of allDomainMappings) {
-		const ips = poolIps.get(mapping.poolId);
-		if (!ips || ips.length === 0) continue;
+	for (const domain of allDomains) {
+		const poolId = domain.ipPoolId ?? defaultPool?.id;
+		const ips = poolId ? poolIps.get(poolId) : undefined;
+		const ip = ips?.[0];
 
-		// Use the first IP in the pool for this domain
-		const ip = ips[0]!;
-		const name = transportName(ip.address);
-		senderLines.push(`@${mapping.domainName}\t${name}:`);
-	}
+		// Transport name is per-domain (not per-IP) so each domain gets its own HELO
+		const name = transportName(domain.name);
+		senderLines.push(`@${domain.name}\t${name}:`);
 
-	// Build a map of IP → first domain that uses it (for HELO fallback)
-	const ipDomainMap = new Map<string, string>();
-	for (const mapping of allDomainMappings) {
-		const ips = poolIps.get(mapping.poolId);
-		if (!ips || ips.length === 0) continue;
-		for (const ip of ips) {
-			if (!ipDomainMap.has(ip.id)) {
-				ipDomainMap.set(ip.id, mapping.domainName);
-			}
+		if (!seenTransports.has(name)) {
+			seenTransports.add(name);
+			const helo = ip?.hostname || domain.name;
+			const bindAddr = ip ? `\n  -o smtp_bind_address=${ip.address}` : '';
+			masterLines.push(
+				`${name}    unix  -       -       n       -       -       smtp${bindAddr}`,
+				`  -o smtp_helo_name=${helo}`,
+				`  -o syslog_name=postfix-${domain.name}`,
+			);
 		}
 	}
 
-	// Generate master.cf transport entries for all IPs (not just used ones)
-	const masterLines: string[] = [];
-	for (const ip of allIps) {
-		const name = transportName(ip.address);
-		const domainName = ipDomainMap.get(ip.id);
-		const helo = ip.hostname || domainName || ip.address;
-		masterLines.push(
-			`${name}    unix  -       -       n       -       -       smtp`,
-			`  -o smtp_bind_address=${ip.address}`,
-			`  -o smtp_helo_name=${helo}`,
-			`  -o syslog_name=postfix-${ip.address}`,
-		);
-	}
+	// Use first domain as global myhostname fallback
+	const myhostname = allDomains[0]?.name ?? null;
 
 	return {
 		senderTransport: `${senderLines.join('\n')}\n`,
 		masterCfTransports: `${masterLines.join('\n')}\n`,
+		myhostname,
 	};
 }
 
@@ -104,6 +82,11 @@ export async function writePostfixConfig(db: Db): Promise<void> {
 
 	await writeFile(path.join(configDir, 'sender_transport'), config.senderTransport);
 	await writeFile(path.join(configDir, 'master_transports.cf'), config.masterCfTransports);
+
+	// Write myhostname override so entrypoint can apply it
+	if (config.myhostname) {
+		await writeFile(path.join(configDir, 'myhostname'), config.myhostname);
+	}
 
 	// Touch trigger file to signal Postfix to reload
 	await writeFile(path.join(configDir, '.reload-trigger'), Date.now().toString());

@@ -46,7 +46,6 @@ services:
       DNS_RESOLVER: email-unbound
       API_URL: http://email-api:3000
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
-      MAIL_HOSTNAME: ${MAIL_HOSTNAME:-mail.localhost}
     volumes:
       - postfix-config:/etc/postfix/dynamic
     depends_on:
