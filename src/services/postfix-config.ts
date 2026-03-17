@@ -66,11 +66,24 @@ export async function generatePostfixConfig(db: Db): Promise<{
 		senderLines.push(`@${mapping.domainName}\t${name}:`);
 	}
 
+	// Build a map of IP → first domain that uses it (for HELO fallback)
+	const ipDomainMap = new Map<string, string>();
+	for (const mapping of allDomainMappings) {
+		const ips = poolIps.get(mapping.poolId);
+		if (!ips || ips.length === 0) continue;
+		for (const ip of ips) {
+			if (!ipDomainMap.has(ip.id)) {
+				ipDomainMap.set(ip.id, mapping.domainName);
+			}
+		}
+	}
+
 	// Generate master.cf transport entries for all IPs (not just used ones)
 	const masterLines: string[] = [];
 	for (const ip of allIps) {
 		const name = transportName(ip.address);
-		const helo = ip.hostname || `mail.${ip.address}`;
+		const domainName = ipDomainMap.get(ip.id);
+		const helo = ip.hostname || domainName || ip.address;
 		masterLines.push(
 			`${name}    unix  -       -       n       -       -       smtp`,
 			`  -o smtp_bind_address=${ip.address}`,

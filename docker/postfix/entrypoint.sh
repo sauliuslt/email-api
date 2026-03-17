@@ -43,6 +43,12 @@ fi
 sed -i 's/^\([a-z].*\)\(unix\s\+-\s\+-\s\+\)y/\1\2n/' /etc/postfix/master.cf
 sed -i 's/^\([a-z].*\)\(inet\s\+n\s\+-\s\+\)y/\1\2n/' /etc/postfix/master.cf
 
+# Set mail hostname from env (used in SMTP HELO/EHLO)
+if [ -n "$MAIL_HOSTNAME" ]; then
+    postconf -e "myhostname = $MAIL_HOSTNAME"
+    echo "Using mail hostname: $MAIL_HOSTNAME"
+fi
+
 # Apply initial config
 apply_config
 
