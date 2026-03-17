@@ -2,8 +2,6 @@ services:
   email-mysql:
     image: mysql:8.0
     env_file: .env
-    ports:
-      - "127.0.0.1:3306:3306"
     volumes:
       - ./data/mysql:/var/lib/mysql
     healthcheck:
@@ -15,8 +13,6 @@ services:
 
   email-redis:
     image: redis:7-alpine
-    ports:
-      - "127.0.0.1:6379:6379"
     volumes:
       - ./data/redis:/data
     healthcheck:
@@ -29,8 +25,8 @@ services:
     build:
       context: ./docker/unbound
     ports:
-      - "127.0.0.1:5353:53/udp"
-      - "127.0.0.1:5353:53/tcp"
+      - "127.0.0.1:53:53/udp"
+      - "127.0.0.1:53:53/tcp"
     volumes:
       - ./docker/unbound/unbound.conf:/etc/unbound/unbound.conf:ro
     healthcheck:
@@ -42,8 +38,6 @@ services:
 
   email-spamassassin:
     image: instantlinux/spamassassin:latest
-    ports:
-      - "127.0.0.1:783:783"
     volumes:
       - ./data/spamassassin:/var/lib/spamassassin
     restart: unless-stopped
@@ -54,7 +48,6 @@ services:
     network_mode: host
     environment:
       DNS_RESOLVER_IP: "127.0.0.1"
-      DNS_RESOLVER_PORT: "5353"
       API_URL: http://127.0.0.1:3000
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
     volumes:
@@ -99,12 +92,13 @@ services:
     environment:
       NODE_ENV: production
       POSTFIX_CONFIG_DIR: /app/config/postfix
-      REDIS_URL: redis://127.0.0.1:6379
-      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD}@127.0.0.1:3306/${MYSQL_DATABASE}
-      SMTP_HOST: "127.0.0.1"
-      SPAMD_HOST: "127.0.0.1"
-      SPAMD_PORT: 783
-    network_mode: host
+    extra_hosts:
+      - "email-postfix:host-gateway"
+    depends_on:
+      email-mysql:
+        condition: service_healthy
+      email-redis:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:

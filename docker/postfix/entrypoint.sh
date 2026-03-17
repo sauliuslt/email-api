@@ -23,15 +23,11 @@ apply_config() {
 
 # Configure DNS resolver for Postfix (host network mode — no Docker DNS)
 if [ -n "$DNS_RESOLVER_IP" ]; then
-    RESOLVER_PORT="${DNS_RESOLVER_PORT:-53}"
     mkdir -p /var/spool/postfix/etc
     echo "nameserver $DNS_RESOLVER_IP" > /var/spool/postfix/etc/resolv.conf
     echo "nameserver $DNS_RESOLVER_IP" > /etc/resolv.conf
     echo "options ndots:0" >> /etc/resolv.conf
-    if [ "$RESOLVER_PORT" != "53" ]; then
-        postconf -e "smtp_dns_resolver_options = nameserver=$DNS_RESOLVER_IP:$RESOLVER_PORT"
-    fi
-    echo "Using DNS resolver: $DNS_RESOLVER_IP:$RESOLVER_PORT"
+    echo "Using DNS resolver: $DNS_RESOLVER_IP"
 fi
 
 # Disable chroot for all Postfix services (container is already isolated)
