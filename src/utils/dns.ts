@@ -1,5 +1,5 @@
-import { promises as dns } from 'node:dns';
 import type { DnsRecord } from '../types/index.js';
+import { getResolver } from '../services/dns-resolver.js';
 
 export function getRequiredDnsRecords(
 	domain: string,
@@ -17,9 +17,6 @@ export function getRequiredDnsRecords(
 		? ipAddresses.map((ip) => `ip4:${ip}`).join(' ')
 		: 'ip4:YOUR_SERVER_IP';
 	const spfValue = `v=spf1 ${ipMechanisms} -all`;
-
-	// Derive mail hostname — if domain already starts with "mail.", use it directly
-	const mailHostname = domain.startsWith('mail.') ? domain : `mail.${domain}`;
 
 	const records: DnsRecord[] = [
 		{
@@ -39,22 +36,22 @@ export function getRequiredDnsRecords(
 		},
 	];
 
-	// A record for mail hostname
+	// A record for the domain itself (used as HELO hostname)
 	if (ipAddresses?.length) {
 		for (const ip of ipAddresses) {
-			records.push({ type: 'A', name: mailHostname, value: ip });
+			records.push({ type: 'A', name: domain, value: ip });
 		}
 	} else {
-		records.push({ type: 'A', name: mailHostname, value: 'YOUR_SERVER_IP' });
+		records.push({ type: 'A', name: domain, value: 'YOUR_SERVER_IP' });
 	}
 
-	// PTR/rDNS records
+	// PTR/rDNS records — should point back to the domain
 	if (ipAddresses?.length) {
 		for (const ip of ipAddresses) {
-			records.push({ type: 'PTR', name: ip, value: mailHostname });
+			records.push({ type: 'PTR', name: ip, value: domain });
 		}
 	} else {
-		records.push({ type: 'PTR', name: 'YOUR_SERVER_IP', value: mailHostname });
+		records.push({ type: 'PTR', name: 'YOUR_SERVER_IP', value: domain });
 	}
 
 	return records;
@@ -62,7 +59,8 @@ export function getRequiredDnsRecords(
 
 export async function verifySpf(domain: string): Promise<boolean> {
 	try {
-		const records = await dns.resolveTxt(domain);
+		const resolver = await getResolver();
+		const records = await resolver.resolveTxt(domain);
 		return records.some((r) => r.join('').includes('v=spf1'));
 	} catch {
 		return false;
@@ -71,7 +69,8 @@ export async function verifySpf(domain: string): Promise<boolean> {
 
 export async function verifyDkim(domain: string, selector: string): Promise<boolean> {
 	try {
-		const records = await dns.resolveTxt(`${selector}._domainkey.${domain}`);
+		const resolver = await getResolver();
+		const records = await resolver.resolveTxt(`${selector}._domainkey.${domain}`);
 		return records.some((r) => r.join('').includes('v=DKIM1'));
 	} catch {
 		return false;
@@ -80,7 +79,8 @@ export async function verifyDkim(domain: string, selector: string): Promise<bool
 
 export async function verifyDmarc(domain: string): Promise<boolean> {
 	try {
-		const records = await dns.resolveTxt(`_dmarc.${domain}`);
+		const resolver = await getResolver();
+		const records = await resolver.resolveTxt(`_dmarc.${domain}`);
 		return records.some((r) => r.join('').includes('v=DMARC1'));
 	} catch {
 		return false;

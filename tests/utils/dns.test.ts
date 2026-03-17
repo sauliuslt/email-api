@@ -21,15 +21,15 @@ describe('dns utils', () => {
 		expect(dmarc?.value).toContain('v=DMARC1');
 
 		const aRecord = records.find((r) => r.type === 'A');
-		expect(aRecord?.name).toBe('mail.example.com');
+		expect(aRecord?.name).toBe('example.com');
 		expect(aRecord?.value).toBe('YOUR_SERVER_IP');
 
 		const ptr = records.find((r) => r.type === 'PTR');
 		expect(ptr?.name).toBe('YOUR_SERVER_IP');
-		expect(ptr?.value).toBe('mail.example.com');
+		expect(ptr?.value).toBe('example.com');
 	});
 
-	it('uses domain directly as mail hostname when it starts with mail.', () => {
+	it('uses domain directly for A and PTR records', () => {
 		const records = getRequiredDnsRecords('mail.example.com', 'mail', publicKey);
 
 		const aRecord = records.find((r) => r.type === 'A');
