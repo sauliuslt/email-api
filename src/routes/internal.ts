@@ -74,19 +74,13 @@ export async function internalRoutes(app: FastifyInstance) {
 			eventType = 'bounced';
 			severity = 'error';
 		} else {
-			// deferred - don't change status yet, just log the event
-			await db.insert(events).values({
-				messageId: message.id,
-				type: 'failed',
-				severity: 'warning',
-				recipient,
-				details: { relay, dsn, response, note: 'Delivery deferred, will retry' },
-			});
-			return reply.send({ ok: true, status: 'deferred' });
+			newStatus = 'failed';
+			eventType = 'failed';
+			severity = 'warning';
 		}
 
-		// Only update if message is still in a pending state
-		if (message.status === 'sending' || message.status === 'queued') {
+		// Allow status updates from pending states and from failed (Postfix retry may succeed)
+		if (message.status === 'sending' || message.status === 'queued' || message.status === 'failed') {
 			await db
 				.update(messages)
 				.set({ status: newStatus, smtpResponse: response ?? null, updatedAt: new Date() })

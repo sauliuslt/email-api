@@ -138,13 +138,30 @@ export function createSendWorker(): Worker<SendJobData> {
 			const unsubAddress = `unsubscribe+${messageId}@${domain.name}`;
 			const listUnsubscribe = `<mailto:${unsubAddress}?subject=unsubscribe>`;
 
+			// Append unsubscribe footer to email body
+			const unsubMailto = `mailto:${unsubAddress}?subject=unsubscribe`;
+			const textFooter = `\n\n---\nIf you don't want to receive emails from this sender, unsubscribe by sending an email to ${unsubAddress}`;
+			const htmlFooter = `<div style="margin-top:32px;padding-top:16px;border-top:1px solid #e5e5e5;font-size:12px;color:#999;text-align:center">If you don't want to receive emails from this sender, <a href="${unsubMailto}" style="color:#999">click here to unsubscribe</a>.</div>`;
+
+			const textBody = message.textBody ? message.textBody + textFooter : undefined;
+			let htmlBody = message.htmlBody ?? undefined;
+			if (htmlBody) {
+				// Insert before closing </body> if present, otherwise append
+				const bodyCloseIdx = htmlBody.lastIndexOf('</body>');
+				if (bodyCloseIdx !== -1) {
+					htmlBody = htmlBody.slice(0, bodyCloseIdx) + htmlFooter + htmlBody.slice(bodyCloseIdx);
+				} else {
+					htmlBody = htmlBody + htmlFooter;
+				}
+			}
+
 			try {
 				const result = await sendSmtp({
 					from: message.from,
 					to: message.to,
 					subject: message.subject,
-					text: message.textBody ?? undefined,
-					html: message.htmlBody ?? undefined,
+					text: textBody,
+					html: htmlBody,
 					messageId: message.messageIdHeader ?? `<${messageId}@${domain.name}>`,
 					dkim: {
 						domainName: domain.name,

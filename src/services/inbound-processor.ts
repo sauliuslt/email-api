@@ -1,8 +1,11 @@
 import crypto from 'node:crypto';
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { simpleParser } from 'mailparser';
 import type { Db } from '../db/connection.js';
-import { events, inboundEmails, messages, suppressionList } from '../db/schema/index.js';
+import { events, inboundEmails, messages } from '../db/schema/index.js';
+import { addSuppression } from './suppression.js';
+
+export { addSuppression };
 
 export interface InboundEmailInput {
 	sender: string;
@@ -16,24 +19,6 @@ export interface InboundResult {
 	matched: boolean;
 	messageId: string | null;
 	suppressed: boolean;
-}
-
-export async function addSuppression(
-	db: Db,
-	domainId: string,
-	email: string,
-	reason: 'bounce' | 'unsubscribe' | 'complaint',
-	details?: string,
-): Promise<void> {
-	await db
-		.insert(suppressionList)
-		.values({
-			domainId,
-			email: email.toLowerCase().trim(),
-			reason,
-			details: details ?? null,
-		})
-		.onDuplicateKeyUpdate({ set: { id: sql`id` } });
 }
 
 /**
