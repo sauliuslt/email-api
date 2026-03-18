@@ -9,15 +9,17 @@ echo "Log watcher started, watching $LOG_FILE, reporting to $API_URL"
 
 tail -n 0 -F "$LOG_FILE" 2>/dev/null | while read -r line; do
     # Only process smtp/lmtp delivery lines with status=sent|bounced|deferred
+    # Pattern uses postfix* to match custom syslog_name (e.g. postfix-example.com/smtp)
     case "$line" in
-        *postfix/smtp*status=sent*|*postfix/smtp*status=bounced*|*postfix/smtp*status=deferred*|\
-        *postfix/lmtp*status=sent*|*postfix/lmtp*status=bounced*|*postfix/lmtp*status=deferred*)
+        *postfix*/smtp*status=sent*|*postfix*/smtp*status=bounced*|*postfix*/smtp*status=deferred*|\
+        *postfix*/lmtp*status=sent*|*postfix*/lmtp*status=bounced*|*postfix*/lmtp*status=deferred*)
             ;;
         *) continue ;;
     esac
 
-    # Extract queue ID: the hex string after "postfix/smtp[PID]: "
-    QUEUE_ID=$(echo "$line" | sed -n 's/.*postfix\/[a-z]*\[[0-9]*\]: \([A-F0-9]*\):.*/\1/p')
+    # Extract queue ID: the hex string after "postfix[-domain]/smtp[PID]: "
+    # [^/]* matches the optional -domain.name in custom syslog_name
+    QUEUE_ID=$(echo "$line" | sed -n 's/.*postfix[^/]*\/[a-z]*\[[0-9]*\]: \([A-F0-9]*\):.*/\1/p')
     [ -z "$QUEUE_ID" ] && continue
 
     # Extract fields
