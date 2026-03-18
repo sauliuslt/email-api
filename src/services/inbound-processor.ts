@@ -37,11 +37,14 @@ export async function addSuppression(
 }
 
 /**
- * Parse VERP address: bounce+{uuid}@domain → uuid
+ * Parse VERP address: bounce+{uuid}@domain or unsubscribe+{uuid}@domain → { id, type }
  */
-function parseVerpRecipient(recipient: string): string | null {
-	const match = recipient.match(/^bounce\+([0-9a-f-]{36})@/i);
-	return match?.[1] ?? null;
+function parseVerpRecipient(
+	recipient: string,
+): { id: string; type: 'bounce' | 'unsubscribe' } | null {
+	const match = recipient.match(/^(bounce|unsubscribe)\+([0-9a-f-]{36})@/i);
+	if (!match?.[1] || !match[2]) return null;
+	return { id: match[2], type: match[1].toLowerCase() as 'bounce' | 'unsubscribe' };
 }
 
 /**
@@ -75,9 +78,12 @@ function classifyEmail(
 		return 'complaint';
 	}
 
-	// VERP bounce address
+	// VERP address: bounce+ or unsubscribe+
 	if (recipient.startsWith('bounce+')) {
 		return 'bounce';
+	}
+	if (recipient.startsWith('unsubscribe+')) {
+		return 'unsubscribe';
 	}
 
 	// DSN bounce detection
@@ -124,13 +130,13 @@ export async function processInboundEmail(
 	let matchedMessageId: string | null = null;
 	let matchedMessage: { id: string; domainId: string; to: string } | null = null;
 
-	// 1. VERP: parse recipient for bounce+{uuid}@domain
-	const verpId = parseVerpRecipient(input.recipient);
-	if (verpId) {
+	// 1. VERP: parse recipient for bounce+{uuid}@domain or unsubscribe+{uuid}@domain
+	const verp = parseVerpRecipient(input.recipient);
+	if (verp) {
 		const [msg] = await db
 			.select({ id: messages.id, domainId: messages.domainId, to: messages.to })
 			.from(messages)
-			.where(eq(messages.id, verpId))
+			.where(eq(messages.id, verp.id))
 			.limit(1);
 		if (msg) {
 			matchedMessage = msg;
@@ -200,7 +206,8 @@ export async function processInboundEmail(
 		matched: !!matchedMessage,
 		rawHeaders: headerLines.join('\n'),
 		details: {
-			verpId,
+			verpId: verp?.id ?? null,
+			verpType: verp?.type ?? null,
 			inReplyTo: parsed.inReplyTo ?? null,
 			references: parsed.references ?? null,
 		},

@@ -15,7 +15,7 @@ relayhost =
 
 # Inbound: accept mail for registered domains via virtual transport
 virtual_mailbox_domains = hash:/etc/postfix/dynamic/virtual_domains
-virtual_transport = pipe:flags=DRhu user=nobody argv=/inbound-handler.sh ${sender} ${recipient}
+virtual_transport = inbound-pipe
 
 # Tighten public-facing restrictions
 smtpd_recipient_restrictions =

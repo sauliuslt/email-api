@@ -134,6 +134,10 @@ export function createSendWorker(): Worker<SendJobData> {
 			// Construct VERP return path for bounce matching
 			const returnPath = `bounce+${messageId}@${domain.name}`;
 
+			// List-Unsubscribe header (RFC 8058 one-click + mailto fallback)
+			const unsubAddress = `unsubscribe+${messageId}@${domain.name}`;
+			const listUnsubscribe = `<mailto:${unsubAddress}?subject=unsubscribe>`;
+
 			try {
 				const result = await sendSmtp({
 					from: message.from,
@@ -147,6 +151,7 @@ export function createSendWorker(): Worker<SendJobData> {
 						keySelector: domain.dkimSelector,
 						privateKey: domain.dkimPrivateKey,
 					},
+					listUnsubscribe,
 					returnPath,
 					smtpPort,
 				});

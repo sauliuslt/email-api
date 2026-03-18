@@ -40,6 +40,16 @@ fi
 sed -i 's/^\([a-z].*\)\(unix\s\+-\s\+-\s\+\)y/\1\2n/' /etc/postfix/master.cf
 sed -i 's/^\([a-z].*\)\(inet\s\+n\s\+-\s\+\)y/\1\2n/' /etc/postfix/master.cf
 
+# Add inbound pipe transport for virtual_transport (idempotent)
+if ! grep -q '^inbound-pipe' /etc/postfix/master.cf; then
+    cat >> /etc/postfix/master.cf <<'INBOUND_EOF'
+# Inbound email pipe transport
+inbound-pipe  unix  -       n       n       -       10      pipe
+  flags=DRhu user=nobody argv=/inbound-handler.sh ${sender} ${recipient}
+INBOUND_EOF
+    echo "Added inbound-pipe transport to master.cf"
+fi
+
 # Apply initial config
 apply_config
 
