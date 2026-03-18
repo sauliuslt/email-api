@@ -15,7 +15,9 @@ import {
 // ── IP Pools ──
 
 export const ipPools = mysqlTable('ip_pools', {
-	id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: varchar('id', { length: 36 })
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
 	name: varchar('name', { length: 255 }).notNull().unique(),
 	isDefault: boolean('is_default').notNull().default(false),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -25,7 +27,9 @@ export const ipPools = mysqlTable('ip_pools', {
 // ── IP Addresses ──
 
 export const ipAddresses = mysqlTable('ip_addresses', {
-	id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: varchar('id', { length: 36 })
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
 	address: varchar('address', { length: 255 }).notNull().unique(),
 	poolId: varchar('pool_id', { length: 36 })
 		.notNull()
@@ -34,9 +38,7 @@ export const ipAddresses = mysqlTable('ip_addresses', {
 	warmupStage: int('warmup_stage').notNull().default(0),
 	dailyLimit: int('daily_limit').notNull().default(50),
 	sentToday: int('sent_today').notNull().default(0),
-	reputationScore: decimal('reputation_score', { precision: 5, scale: 2 })
-		.notNull()
-		.default('100'),
+	reputationScore: decimal('reputation_score', { precision: 5, scale: 2 }).notNull().default('100'),
 	postfixPort: int('postfix_port').notNull().default(25),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -45,7 +47,9 @@ export const ipAddresses = mysqlTable('ip_addresses', {
 // ── Domains ──
 
 export const domains = mysqlTable('domains', {
-	id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: varchar('id', { length: 36 })
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
 	name: varchar('name', { length: 255 }).notNull().unique(),
 	spfVerified: boolean('spf_verified').notNull().default(false),
 	dkimVerified: boolean('dkim_verified').notNull().default(false),
@@ -53,7 +57,9 @@ export const domains = mysqlTable('domains', {
 	dkimSelector: varchar('dkim_selector', { length: 255 }).notNull().default('mail'),
 	dkimPrivateKey: text('dkim_private_key').notNull(),
 	dkimPublicKey: text('dkim_public_key').notNull(),
-	ipPoolId: varchar('ip_pool_id', { length: 36 }).references(() => ipPools.id, { onDelete: 'set null' }),
+	ipPoolId: varchar('ip_pool_id', { length: 36 }).references(() => ipPools.id, {
+		onDelete: 'set null',
+	}),
 	webhooks: json('webhooks').$type<Record<string, string>>().default({}),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
 	updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -62,11 +68,15 @@ export const domains = mysqlTable('domains', {
 // ── API Keys ──
 
 export const apiKeys = mysqlTable('api_keys', {
-	id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: varchar('id', { length: 36 })
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
 	name: varchar('name', { length: 255 }).notNull(),
 	keyPrefix: varchar('key_prefix', { length: 255 }).notNull(),
 	keyHash: varchar('key_hash', { length: 255 }).notNull().unique(),
-	domainId: varchar('domain_id', { length: 36 }).references(() => domains.id, { onDelete: 'cascade' }),
+	domainId: varchar('domain_id', { length: 36 }).references(() => domains.id, {
+		onDelete: 'cascade',
+	}),
 	permissions: json('permissions').$type<string[]>().default([]),
 	active: boolean('active').notNull().default(true),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -76,7 +86,9 @@ export const apiKeys = mysqlTable('api_keys', {
 // ── Messages ──
 
 export const messages = mysqlTable('messages', {
-	id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: varchar('id', { length: 36 })
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
 	domainId: varchar('domain_id', { length: 36 })
 		.notNull()
 		.references(() => domains.id, { onDelete: 'cascade' }),
@@ -85,7 +97,9 @@ export const messages = mysqlTable('messages', {
 	subject: text('subject').notNull(),
 	textBody: text('text_body'),
 	htmlBody: text('html_body'),
-	status: mysqlEnum('status', ['queued', 'sending', 'delivered', 'bounced', 'failed', 'rejected']).notNull().default('queued'),
+	status: mysqlEnum('status', ['queued', 'sending', 'delivered', 'bounced', 'failed', 'rejected'])
+		.notNull()
+		.default('queued'),
 	ipAddressId: varchar('ip_address_id', { length: 36 }).references(() => ipAddresses.id),
 	messageIdHeader: varchar('message_id_header', { length: 255 }),
 	postfixQueueId: varchar('postfix_queue_id', { length: 255 }),
@@ -97,7 +111,9 @@ export const messages = mysqlTable('messages', {
 // ── Events ──
 
 export const events = mysqlTable('events', {
-	id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: varchar('id', { length: 36 })
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
 	messageId: varchar('message_id', { length: 36 })
 		.notNull()
 		.references(() => messages.id, { onDelete: 'cascade' }),
@@ -111,7 +127,9 @@ export const events = mysqlTable('events', {
 		'complained',
 		'unsubscribed',
 	]).notNull(),
-	severity: mysqlEnum('severity', ['info', 'warning', 'error', 'temporary', 'permanent']).notNull().default('info'),
+	severity: mysqlEnum('severity', ['info', 'warning', 'error', 'temporary', 'permanent'])
+		.notNull()
+		.default('info'),
 	recipient: varchar('recipient', { length: 255 }).notNull(),
 	details: json('details').$type<Record<string, unknown>>().default({}),
 	createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -122,7 +140,9 @@ export const events = mysqlTable('events', {
 export const suppressionList = mysqlTable(
 	'suppression_list',
 	{
-		id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+		id: varchar('id', { length: 36 })
+			.primaryKey()
+			.$defaultFn(() => crypto.randomUUID()),
 		domainId: varchar('domain_id', { length: 36 })
 			.notNull()
 			.references(() => domains.id, { onDelete: 'cascade' }),
@@ -134,10 +154,33 @@ export const suppressionList = mysqlTable(
 	(t) => [unique('uq_domain_email').on(t.domainId, t.email)],
 );
 
+// ── Inbound Emails ──
+
+export const inboundEmails = mysqlTable('inbound_emails', {
+	id: varchar('id', { length: 36 })
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
+	sender: varchar('sender', { length: 255 }).notNull(),
+	recipient: varchar('recipient', { length: 255 }).notNull(),
+	subject: text('subject'),
+	messageId: varchar('message_id', { length: 36 }).references(() => messages.id, {
+		onDelete: 'set null',
+	}),
+	classification: mysqlEnum('classification', ['bounce', 'complaint', 'unsubscribe', 'unknown'])
+		.default('unknown')
+		.notNull(),
+	matched: boolean('matched').notNull().default(false),
+	rawHeaders: text('raw_headers'),
+	details: json('details').$type<Record<string, unknown>>().default({}),
+	createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 // ── Warmup Schedules ──
 
 export const warmupSchedules = mysqlTable('warmup_schedules', {
-	id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: varchar('id', { length: 36 })
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
 	day: int('day').notNull().unique(),
 	dailyLimit: int('daily_limit').notNull(),
 });

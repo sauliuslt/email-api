@@ -4,6 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import { env } from '../config/env.js';
 import { getDb } from '../db/connection.js';
 import { events, messages } from '../db/schema/index.js';
+import { addSuppression, processInboundEmail } from '../services/inbound-processor.js';
 
 interface DeliveryStatusBody {
 	queueId: string;
@@ -12,6 +13,12 @@ interface DeliveryStatusBody {
 	relay?: string;
 	dsn?: string;
 	response?: string;
+}
+
+interface InboundBody {
+	sender: string;
+	recipient: string;
+	rawEmail: string;
 }
 
 export async function internalRoutes(app: FastifyInstance) {
@@ -39,7 +46,12 @@ export async function internalRoutes(app: FastifyInstance) {
 
 		// Find message by Postfix queue ID
 		const [message] = await db
-			.select({ id: messages.id, status: messages.status })
+			.select({
+				id: messages.id,
+				status: messages.status,
+				domainId: messages.domainId,
+				to: messages.to,
+			})
 			.from(messages)
 			.where(eq(messages.postfixQueueId, queueId))
 			.limit(1);
@@ -89,6 +101,38 @@ export async function internalRoutes(app: FastifyInstance) {
 			details: { relay, dsn, response },
 		});
 
+		// Auto-suppress recipient on bounce
+		if (status === 'bounced') {
+			await addSuppression(
+				db,
+				message.domainId,
+				message.to,
+				'bounce',
+				`Auto-suppressed: bounce detected via log watcher (dsn=${dsn ?? 'unknown'})`,
+			);
+		}
+
 		return reply.send({ ok: true, status: newStatus });
 	});
+
+	// Called by Postfix inbound-handler.sh to process incoming emails
+	app.post<{ Body: InboundBody }>(
+		'/inbound',
+		{
+			config: {},
+			bodyLimit: 35 * 1024 * 1024, // 35MB for large emails
+		},
+		async (request, reply) => {
+			const { sender, recipient, rawEmail } = request.body;
+
+			if (!sender || !recipient || !rawEmail) {
+				return reply.status(400).send({ error: 'sender, recipient, and rawEmail required' });
+			}
+
+			const db = getDb();
+			const result = await processInboundEmail(db, { sender, recipient, rawEmail });
+
+			return reply.send({ ok: true, ...result });
+		},
+	);
 }

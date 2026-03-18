@@ -1,0 +1,66 @@
+<%- include('../layouts/main', { title: 'Inbound Emails', currentPath, flash }) %>
+
+<h2 class="text-2xl font-bold text-gray-900 mb-6">Inbound Emails</h2>
+
+<div class="bg-white rounded-lg shadow p-4 mb-6">
+  <form method="GET" action="/admin/inbound" class="flex items-end gap-4 flex-wrap">
+    <div>
+      <label for="classification" class="block text-sm font-medium text-gray-700 mb-1">Classification</label>
+      <select id="classification" name="classification" class="px-3 py-2 border border-gray-300 rounded-md text-sm">
+        <option value="">All</option>
+        <% ['bounce','complaint','unsubscribe','unknown'].forEach(function(c) { %>
+          <option value="<%= c %>" <%= filters.classification === c ? 'selected' : '' %>><%= c %></option>
+        <% }); %>
+      </select>
+    </div>
+    <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-800">Filter</button>
+    <a href="/admin/inbound" class="text-sm text-gray-500 hover:text-gray-700 py-2">Clear</a>
+  </form>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-x-auto">
+  <table class="min-w-full divide-y divide-gray-200">
+    <thead class="bg-gray-50">
+      <tr>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sender</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Recipient</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Classification</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Matched</th>
+        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-gray-200">
+      <% if (emails.length === 0) { %>
+        <tr><td colspan="6" class="px-6 py-4 text-sm text-gray-500 text-center">No inbound emails found</td></tr>
+      <% } %>
+      <% emails.forEach(function(e) { %>
+      <tr class="hover:bg-gray-50">
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><%= e.sender %></td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><%= e.recipient %></td>
+        <td class="px-6 py-4 text-sm">
+          <a href="/admin/inbound/<%= e.id %>" class="text-blue-600 hover:text-blue-800"><%= e.subject || '(no subject)' %></a>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap">
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+            <% if (e.classification === 'bounce') { %>bg-red-100 text-red-800<% } else if (e.classification === 'complaint') { %>bg-orange-100 text-orange-800<% } else if (e.classification === 'unsubscribe') { %>bg-yellow-100 text-yellow-800<% } else { %>bg-gray-100 text-gray-800<% } %>
+          "><%= e.classification %></span>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm">
+          <% if (e.matched) { %>
+            <a href="/admin/messages/<%= e.messageId %>" class="text-green-600 hover:text-green-800">Yes</a>
+          <% } else { %>
+            <span class="text-gray-400">No</span>
+          <% } %>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= new Date(e.createdAt).toLocaleString() %></td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+
+<% var baseUrl = '/admin/inbound?classification=' + (filters.classification || ''); %>
+<%- include('../partials/pagination', { pagination, baseUrl }) %>
+
+<%- include('../layouts/footer') %>

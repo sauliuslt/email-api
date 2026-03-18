@@ -129,10 +129,7 @@ export async function apiKeyRoutes(app: FastifyInstance): Promise<void> {
 		const { id } = request.params;
 		const db = getDb();
 
-		const [existing] = await db
-			.select({ id: apiKeys.id })
-			.from(apiKeys)
-			.where(eq(apiKeys.id, id));
+		const [existing] = await db.select({ id: apiKeys.id }).from(apiKeys).where(eq(apiKeys.id, id));
 
 		if (!existing) {
 			return reply.code(404).send({ error: 'API key not found' });

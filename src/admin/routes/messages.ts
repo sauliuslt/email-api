@@ -1,7 +1,7 @@
 import { and, count, desc, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { getDb } from '../../db/connection.js';
-import { domains, events, messages } from '../../db/schema/index.js';
+import { events, domains, messages } from '../../db/schema/index.js';
 import { getFlash, requireAdmin } from '../middleware/admin-auth.js';
 
 const PAGE_SIZE = 50;
@@ -19,7 +19,9 @@ export async function messageRoutes(app: FastifyInstance) {
 
 		const conditions = [];
 		if (statusFilter) {
-			conditions.push(eq(messages.status, statusFilter as typeof messages.status.enumValues[number]));
+			conditions.push(
+				eq(messages.status, statusFilter as (typeof messages.status.enumValues)[number]),
+			);
 		}
 		if (domainFilter) {
 			conditions.push(eq(messages.domainId, domainFilter));
@@ -65,7 +67,11 @@ export async function messageRoutes(app: FastifyInstance) {
 
 	app.get<{ Params: { id: string } }>('/messages/:id', async (request, reply) => {
 		const db = getDb();
-		const [message] = await db.select().from(messages).where(eq(messages.id, request.params.id)).limit(1);
+		const [message] = await db
+			.select()
+			.from(messages)
+			.where(eq(messages.id, request.params.id))
+			.limit(1);
 
 		if (!message) {
 			return reply.redirect('/admin/messages');
@@ -92,5 +98,4 @@ export async function messageRoutes(app: FastifyInstance) {
 			domainName: domain?.name ?? 'Unknown',
 		});
 	});
-
 }

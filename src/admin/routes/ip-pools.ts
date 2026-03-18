@@ -28,7 +28,11 @@ export async function ipPoolRoutes(app: FastifyInstance) {
 
 	app.get<{ Params: { id: string } }>('/ip-pools/:id', async (request, reply) => {
 		const db = getDb();
-		const [pool] = await db.select().from(ipPools).where(eq(ipPools.id, request.params.id)).limit(1);
+		const [pool] = await db
+			.select()
+			.from(ipPools)
+			.where(eq(ipPools.id, request.params.id))
+			.limit(1);
 
 		if (!pool) {
 			return reply.redirect('/admin/ip-pools');
@@ -53,7 +57,13 @@ export async function ipPoolRoutes(app: FastifyInstance) {
 		}
 
 		const flash = getFlash(request);
-		return reply.view('ip-pools/detail.ejs', { currentPath: '/ip-pools', flash, pool, ips, ptrResults });
+		return reply.view('ip-pools/detail.ejs', {
+			currentPath: '/ip-pools',
+			flash,
+			pool,
+			ips,
+			ptrResults,
+		});
 	});
 
 	app.post<{ Body: { name: string } }>('/ip-pools', async (request, reply) => {
@@ -69,7 +79,10 @@ export async function ipPoolRoutes(app: FastifyInstance) {
 			await db.insert(ipPools).values({ name: name.trim() });
 			request.session.set('flash', { type: 'success', message: `Pool "${name}" created` });
 		} catch {
-			request.session.set('flash', { type: 'error', message: 'Failed to create pool (name may already exist)' });
+			request.session.set('flash', {
+				type: 'error',
+				message: 'Failed to create pool (name may already exist)',
+			});
 		}
 
 		return reply.redirect('/admin/ip-pools');
@@ -104,7 +117,10 @@ export async function ipPoolRoutes(app: FastifyInstance) {
 					: `IP ${trimmedAddress} added (no PTR record found — reverse DNS must be configured)`;
 				request.session.set('flash', { type: hostname ? 'success' : 'info', message: msg });
 			} catch {
-				request.session.set('flash', { type: 'error', message: 'Failed to add IP (may already exist)' });
+				request.session.set('flash', {
+					type: 'error',
+					message: 'Failed to add IP (may already exist)',
+				});
 			}
 
 			return reply.redirect(`/admin/ip-pools/${request.params.id}`);
@@ -131,31 +147,28 @@ export async function ipPoolRoutes(app: FastifyInstance) {
 	);
 
 	// JSON API: DNSBL check for an IP address
-	app.get<{ Params: { ipId: string } }>(
-		'/ip-pools/api/dnsbl/:ipId',
-		async (request, reply) => {
-			const db = getDb();
-			const [ip] = await db
-				.select({ address: ipAddresses.address })
-				.from(ipAddresses)
-				.where(eq(ipAddresses.id, request.params.ipId))
-				.limit(1);
+	app.get<{ Params: { ipId: string } }>('/ip-pools/api/dnsbl/:ipId', async (request, reply) => {
+		const db = getDb();
+		const [ip] = await db
+			.select({ address: ipAddresses.address })
+			.from(ipAddresses)
+			.where(eq(ipAddresses.id, request.params.ipId))
+			.limit(1);
 
-			if (!ip) {
-				return reply.code(404).send({ error: 'IP not found' });
-			}
+		if (!ip) {
+			return reply.code(404).send({ error: 'IP not found' });
+		}
 
-			const results = await checkAllDnsbl(ip.address);
-			return reply.send({
-				ip: ip.address,
-				results: results.map((r) => ({
-					name: r.provider.name,
-					zone: r.provider.zone,
-					url: r.provider.url,
-					listed: r.listed,
-					error: r.error ?? null,
-				})),
-			});
-		},
-	);
+		const results = await checkAllDnsbl(ip.address);
+		return reply.send({
+			ip: ip.address,
+			results: results.map((r) => ({
+				name: r.provider.name,
+				zone: r.provider.zone,
+				url: r.provider.url,
+				listed: r.listed,
+				error: r.error ?? null,
+			})),
+		});
+	});
 }

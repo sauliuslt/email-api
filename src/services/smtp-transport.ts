@@ -33,6 +33,7 @@ export interface SmtpSendOptions {
 		privateKey: string;
 	};
 	listUnsubscribe?: string;
+	returnPath?: string;
 	smtpPort?: number;
 }
 
@@ -53,6 +54,9 @@ export async function sendSmtp(options: SmtpSendOptions): Promise<{ response: st
 		html: options.html,
 		messageId: options.messageId,
 		headers,
+		...(options.returnPath && {
+			envelope: { from: options.returnPath, to: options.to },
+		}),
 		dkim: {
 			domainName: options.dkim.domainName,
 			keySelector: options.dkim.keySelector,

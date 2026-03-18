@@ -34,6 +34,7 @@ tail -n 0 -F "$LOG_FILE" 2>/dev/null | while read -r line; do
     if [ -n "$QUEUE_ID" ] && [ -n "$STATUS" ]; then
         curl -s -X POST "$API_URL/internal/delivery-status" \
             -H "Content-Type: application/json" \
+            -H "X-Internal-Secret: $INTERNAL_API_SECRET" \
             -d "{\"queueId\":\"$QUEUE_ID\",\"status\":\"$STATUS\",\"recipient\":\"$RECIPIENT\",\"relay\":\"$RELAY\",\"dsn\":\"$DSN\",\"response\":\"$RESPONSE\"}" \
             >/dev/null 2>&1 &
     fi

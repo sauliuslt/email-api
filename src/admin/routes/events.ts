@@ -20,7 +20,7 @@ export async function eventRoutes(app: FastifyInstance) {
 
 		const conditions = [];
 		if (typeFilter) {
-			conditions.push(eq(events.type, typeFilter as typeof events.type.enumValues[number]));
+			conditions.push(eq(events.type, typeFilter as (typeof events.type.enumValues)[number]));
 		}
 		if (fromDate) {
 			conditions.push(gte(events.createdAt, new Date(fromDate)));

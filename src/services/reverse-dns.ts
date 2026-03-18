@@ -29,7 +29,8 @@ export async function reverseDnsLookup(
 			ipAddress,
 			ptrRecords: [],
 			matchesHostname: false,
-			error: error.code === 'ENOTFOUND' ? 'No PTR record found' : `DNS lookup failed: ${error.code}`,
+			error:
+				error.code === 'ENOTFOUND' ? 'No PTR record found' : `DNS lookup failed: ${error.code}`,
 		};
 	}
 }

@@ -1,5 +1,5 @@
-import type { DnsRecord } from '../types/index.js';
 import { getResolver } from '../services/dns-resolver.js';
+import type { DnsRecord } from '../types/index.js';
 
 export function getRequiredDnsRecords(
 	domain: string,

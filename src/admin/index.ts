@@ -14,6 +14,7 @@ import { authRoutes } from './routes/auth.js';
 import { dashboardRoutes } from './routes/dashboard.js';
 import { domainRoutes } from './routes/domains.js';
 import { eventRoutes } from './routes/events.js';
+import { inboundRoutes } from './routes/inbound.js';
 import { ipPoolRoutes } from './routes/ip-pools.js';
 import { messageRoutes } from './routes/messages.js';
 import { suppressionRoutes } from './routes/suppressions.js';
@@ -73,6 +74,7 @@ export async function adminPlugin(app: FastifyInstance) {
 	await app.register(messageRoutes);
 	await app.register(eventRoutes);
 	await app.register(suppressionRoutes);
+	await app.register(inboundRoutes);
 	await app.register(ipPoolRoutes);
 	await app.register(apiDocsRoutes);
 	await app.register(whatsNewRoutes);

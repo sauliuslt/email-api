@@ -62,7 +62,10 @@ export async function apiKeyRoutes(app: FastifyInstance) {
 			permissions: [],
 		});
 
-		request.session.set('flash', { type: 'success', message: 'API key created. Copy it now — it won\'t be shown again.' });
+		request.session.set('flash', {
+			type: 'success',
+			message: "API key created. Copy it now — it won't be shown again.",
+		});
 		request.session.set('newKey', key);
 		return reply.redirect('/admin/api-keys');
 	});

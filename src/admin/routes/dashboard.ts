@@ -1,7 +1,7 @@
 import { count, desc } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { getDb } from '../../db/connection.js';
-import { domains, events, messages } from '../../db/schema/index.js';
+import { events, domains, messages } from '../../db/schema/index.js';
 import { getFlash, requireAdmin } from '../middleware/admin-auth.js';
 
 export async function dashboardRoutes(app: FastifyInstance) {

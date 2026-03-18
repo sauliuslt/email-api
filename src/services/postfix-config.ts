@@ -12,6 +12,7 @@ function transportName(identifier: string): string {
 export async function generatePostfixConfig(db: Db): Promise<{
 	senderTransport: string;
 	masterCfTransports: string;
+	virtualDomains: string;
 	myhostname: string | null;
 }> {
 	// Get ALL domains
@@ -66,12 +67,16 @@ export async function generatePostfixConfig(db: Db): Promise<{
 		}
 	}
 
+	// Generate virtual_domains for inbound mail acceptance
+	const virtualDomainLines = allDomains.map((d) => `${d.name}\tok`);
+
 	// Use first domain as global myhostname fallback
 	const myhostname = allDomains[0]?.name ?? null;
 
 	return {
 		senderTransport: `${senderLines.join('\n')}\n`,
 		masterCfTransports: `${masterLines.join('\n')}\n`,
+		virtualDomains: `${virtualDomainLines.join('\n')}\n`,
 		myhostname,
 	};
 }
@@ -82,6 +87,7 @@ export async function writePostfixConfig(db: Db): Promise<void> {
 
 	await writeFile(path.join(configDir, 'sender_transport'), config.senderTransport);
 	await writeFile(path.join(configDir, 'master_transports.cf'), config.masterCfTransports);
+	await writeFile(path.join(configDir, 'virtual_domains'), config.virtualDomains);
 
 	// Write myhostname override so entrypoint can apply it
 	if (config.myhostname) {

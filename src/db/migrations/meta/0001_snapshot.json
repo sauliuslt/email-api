@@ -1,8 +1,8 @@
 {
 	"version": "5",
 	"dialect": "mysql",
-	"id": "6406edf0-b638-4484-813e-d90b8fdf7e8e",
-	"prevId": "00000000-0000-0000-0000-000000000000",
+	"id": "87dac63d-3235-455b-9976-baf1bda60906",
+	"prevId": "6406edf0-b638-4484-813e-d90b8fdf7e8e",
 	"tables": {
 		"api_keys": {
 			"name": "api_keys",
@@ -293,6 +293,105 @@
 			"compositePrimaryKeys": {
 				"events_id": {
 					"name": "events_id",
+					"columns": ["id"]
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraint": {}
+		},
+		"inbound_emails": {
+			"name": "inbound_emails",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "varchar(36)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"sender": {
+					"name": "sender",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"recipient": {
+					"name": "recipient",
+					"type": "varchar(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"subject": {
+					"name": "subject",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"message_id": {
+					"name": "message_id",
+					"type": "varchar(36)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"classification": {
+					"name": "classification",
+					"type": "enum('bounce','complaint','unsubscribe','unknown')",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'unknown'"
+				},
+				"matched": {
+					"name": "matched",
+					"type": "boolean",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": false
+				},
+				"raw_headers": {
+					"name": "raw_headers",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"details": {
+					"name": "details",
+					"type": "json",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false,
+					"default": "('{}')"
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "timestamp",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(now())"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"inbound_emails_message_id_messages_id_fk": {
+					"name": "inbound_emails_message_id_messages_id_fk",
+					"tableFrom": "inbound_emails",
+					"tableTo": "messages",
+					"columnsFrom": ["message_id"],
+					"columnsTo": ["id"],
+					"onDelete": "set null",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"inbound_emails_id": {
+					"name": "inbound_emails_id",
 					"columns": ["id"]
 				}
 			},

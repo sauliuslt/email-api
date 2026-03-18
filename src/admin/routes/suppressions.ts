@@ -19,7 +19,9 @@ export async function suppressionRoutes(app: FastifyInstance) {
 
 		const conditions = [];
 		if (reasonFilter) {
-			conditions.push(eq(suppressionList.reason, reasonFilter as 'bounce' | 'unsubscribe' | 'complaint'));
+			conditions.push(
+				eq(suppressionList.reason, reasonFilter as 'bounce' | 'unsubscribe' | 'complaint'),
+			);
 		}
 		if (domainFilter) {
 			conditions.push(eq(suppressionList.domainId, domainFilter));
@@ -68,20 +70,29 @@ export async function suppressionRoutes(app: FastifyInstance) {
 			const { email, domainId, reason, details } = request.body;
 
 			if (!email || !domainId || !reason) {
-				request.session.set('flash', { type: 'error', message: 'Email, domain, and reason are required' });
+				request.session.set('flash', {
+					type: 'error',
+					message: 'Email, domain, and reason are required',
+				});
 				return reply.redirect('/admin/suppressions');
 			}
 
 			const db = getDb();
 			try {
-				await db.insert(suppressionList).values({
-					email: email.toLowerCase().trim(),
-					domainId,
-					reason: reason as 'bounce' | 'unsubscribe' | 'complaint',
-					details: details || null,
-				}).onDuplicateKeyUpdate({ set: { id: sql`id` } });
+				await db
+					.insert(suppressionList)
+					.values({
+						email: email.toLowerCase().trim(),
+						domainId,
+						reason: reason as 'bounce' | 'unsubscribe' | 'complaint',
+						details: details || null,
+					})
+					.onDuplicateKeyUpdate({ set: { id: sql`id` } });
 
-				request.session.set('flash', { type: 'success', message: `Suppression added for ${email}` });
+				request.session.set('flash', {
+					type: 'success',
+					message: `Suppression added for ${email}`,
+				});
 			} catch {
 				request.session.set('flash', { type: 'error', message: 'Failed to add suppression' });
 			}

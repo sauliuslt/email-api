@@ -131,6 +131,9 @@ export function createSendWorker(): Worker<SendJobData> {
 				);
 			}
 
+			// Construct VERP return path for bounce matching
+			const returnPath = `bounce+${messageId}@${domain.name}`;
+
 			try {
 				const result = await sendSmtp({
 					from: message.from,
@@ -144,6 +147,7 @@ export function createSendWorker(): Worker<SendJobData> {
 						keySelector: domain.dkimSelector,
 						privateKey: domain.dkimPrivateKey,
 					},
+					returnPath,
 					smtpPort,
 				});
 

@@ -12,6 +12,12 @@ apply_config() {
     fi
     postmap hash:"$CONFIG_DIR/sender_transport" 2>/dev/null || true
 
+    # Build virtual_domains hash map for inbound mail (create empty if missing)
+    if [ ! -f "$CONFIG_DIR/virtual_domains" ]; then
+        touch "$CONFIG_DIR/virtual_domains"
+    fi
+    postmap hash:"$CONFIG_DIR/virtual_domains" 2>/dev/null || true
+
     # Regenerate master.cf dynamic transports section
     sed -i '/^# BEGIN DYNAMIC TRANSPORTS/,/^# END DYNAMIC TRANSPORTS/d' /etc/postfix/master.cf
     if [ -f "$CONFIG_DIR/master_transports.cf" ] && [ -s "$CONFIG_DIR/master_transports.cf" ]; then

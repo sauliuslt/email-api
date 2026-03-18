@@ -3,8 +3,8 @@ compatibility_level = 3.6
 smtpd_banner = $myhostname ESMTP
 biff = no
 
-# Network
-inet_interfaces = 127.0.0.1, 172.17.0.1
+# Network — accept on all interfaces for inbound mail
+inet_interfaces = all
 inet_protocols = ipv4
 mynetworks = 172.16.0.0/12, 10.0.0.0/8, 192.168.0.0/16, 127.0.0.0/8
 
@@ -13,9 +13,22 @@ myhostname = mail.localhost
 mydestination =
 relayhost =
 
-# Accept mail from Docker network (no DNS checks on inbound - we trust mynetworks)
-smtpd_recipient_restrictions = permit_mynetworks, reject_unauth_destination
+# Inbound: accept mail for registered domains via virtual transport
+virtual_mailbox_domains = hash:/etc/postfix/dynamic/virtual_domains
+virtual_transport = pipe:flags=DRhu user=nobody argv=/inbound-handler.sh ${sender} ${recipient}
+
+# Tighten public-facing restrictions
+smtpd_recipient_restrictions =
+    permit_mynetworks,
+    reject_unauth_destination,
+    reject_unknown_sender_domain,
+    reject_non_fqdn_sender,
+    reject_non_fqdn_recipient
 smtpd_relay_restrictions = permit_mynetworks, reject_unauth_destination
+
+# Rate limit inbound
+smtpd_client_message_rate_limit = 100
+anvil_rate_time_unit = 60s
 
 # Disable chroot for all services (Docker container is already isolated)
 # This ensures Postfix processes can read /etc/resolv.conf directly

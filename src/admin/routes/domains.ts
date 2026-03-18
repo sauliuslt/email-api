@@ -84,7 +84,12 @@ export async function domainRoutes(app: FastifyInstance) {
 			}
 		}
 
-		const dnsRecords = getRequiredDnsRecords(domain.name, domain.dkimSelector, domain.dkimPublicKey, assignedIps);
+		const dnsRecords = getRequiredDnsRecords(
+			domain.name,
+			domain.dkimSelector,
+			domain.dkimPublicKey,
+			assignedIps,
+		);
 		const flash = getFlash(request);
 
 		return reply.view('domains/detail.ejs', {
@@ -115,7 +120,10 @@ export async function domainRoutes(app: FastifyInstance) {
 			});
 			request.session.set('flash', { type: 'success', message: `Domain ${name} created` });
 		} catch (err: unknown) {
-			const message = err instanceof Error && err.message.includes('unique') ? 'Domain already exists' : 'Failed to create domain';
+			const message =
+				err instanceof Error && err.message.includes('unique')
+					? 'Domain already exists'
+					: 'Failed to create domain';
 			request.session.set('flash', { type: 'error', message });
 		}
 
@@ -145,7 +153,11 @@ export async function domainRoutes(app: FastifyInstance) {
 
 	app.post<{ Params: { id: string } }>('/domains/:id/verify', async (request, reply) => {
 		const db = getDb();
-		const [domain] = await db.select().from(domains).where(eq(domains.id, request.params.id)).limit(1);
+		const [domain] = await db
+			.select()
+			.from(domains)
+			.where(eq(domains.id, request.params.id))
+			.limit(1);
 
 		if (!domain) {
 			return reply.redirect('/admin/domains');
