@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PERMISSIONS } from './auth.js';
 
 export const domainNameSchema = z
 	.string()
@@ -18,14 +19,16 @@ export const sendMessageSchema = z.object({
 	from: emailSchema,
 	to: emailSchema,
 	subject: z.string().min(1).max(998),
-	text: z.string().optional(),
-	html: z.string().optional(),
+	text: z.string().max(512_000).optional(),
+	html: z.string().max(512_000).optional(),
 });
+
+const permissionValues = Object.values(PERMISSIONS) as [string, ...string[]];
 
 export const apiKeyCreateSchema = z.object({
 	name: z.string().min(1).max(255),
 	domainId: z.string().uuid().optional(),
-	permissions: z.array(z.string()).optional(),
+	permissions: z.array(z.enum(permissionValues)).optional(),
 });
 
 export const suppressionCreateSchema = z.object({

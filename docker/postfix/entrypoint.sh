@@ -55,7 +55,7 @@ cat > /etc/inbound-env <<EOF
 API_URL="${API_URL:-http://email-api:3000}"
 INTERNAL_API_SECRET="${INTERNAL_API_SECRET}"
 EOF
-chmod 644 /etc/inbound-env
+chmod 600 /etc/inbound-env
 
 # Apply initial config
 apply_config
@@ -65,6 +65,14 @@ if [ -f "$CONFIG_DIR/myhostname" ]; then
     HOSTNAME_VAL=$(cat "$CONFIG_DIR/myhostname")
     postconf -e "myhostname = $HOSTNAME_VAL"
     echo "Using mail hostname from DB: $HOSTNAME_VAL"
+fi
+
+# Generate self-signed TLS cert for inbound STARTTLS if none exists
+if [ ! -f /etc/postfix/smtpd.pem ]; then
+    openssl req -new -x509 -nodes -days 3650 \
+        -out /etc/postfix/smtpd.pem -keyout /etc/postfix/smtpd.key \
+        -subj "/CN=$(cat "$CONFIG_DIR/myhostname" 2>/dev/null || echo mail.localhost)"
+    chmod 600 /etc/postfix/smtpd.key
 fi
 
 # Start Postfix in background

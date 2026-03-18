@@ -32,8 +32,8 @@ export async function adminPlugin(app: FastifyInstance) {
 		cookie: {
 			secure: env().COOKIE_SECURE,
 			httpOnly: true,
-			sameSite: 'lax',
-			maxAge: 24 * 60 * 60 * 1000, // 24 hours
+			sameSite: 'strict',
+			maxAge: 4 * 60 * 60 * 1000, // 4 hours
 			path: '/admin',
 		},
 		saveUninitialized: false,

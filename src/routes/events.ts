@@ -26,6 +26,19 @@ export async function eventRoutes(app: FastifyInstance): Promise<void> {
 		const { domain: domainName } = request.params;
 		const { type, recipient, begin, end, limit: limitStr, cursor } = request.query;
 
+		if (type && !events.type.enumValues.includes(type as (typeof events.type.enumValues)[number])) {
+			return reply.code(400).send({ error: 'Invalid event type' });
+		}
+		if (begin && Number.isNaN(Date.parse(begin))) {
+			return reply.code(400).send({ error: 'Invalid begin date' });
+		}
+		if (end && Number.isNaN(Date.parse(end))) {
+			return reply.code(400).send({ error: 'Invalid end date' });
+		}
+		if (cursor && Number.isNaN(Date.parse(cursor))) {
+			return reply.code(400).send({ error: 'Invalid cursor date' });
+		}
+
 		// Find domain
 		const [domain] = await db
 			.select({ id: domains.id })

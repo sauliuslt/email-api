@@ -6,7 +6,7 @@ biff = no
 # Network — accept on all interfaces for inbound mail
 inet_interfaces = all
 inet_protocols = ipv4
-mynetworks = 172.16.0.0/12, 10.0.0.0/8, 192.168.0.0/16, 127.0.0.0/8
+mynetworks = 127.0.0.0/8
 
 # General
 myhostname = mail.localhost
@@ -17,7 +17,10 @@ relayhost =
 virtual_mailbox_domains = hash:/etc/postfix/dynamic/virtual_domains
 virtual_transport = inbound-pipe
 
-# Tighten public-facing restrictions
+# Port 25 restrictions:
+# - mynetworks (127.0.0.0/8 only) can relay outbound — this is the API send worker
+# - Everyone else can only send TO our virtual_mailbox_domains (reject_unauth_destination)
+# - Additional checks for sender validity on external connections
 smtpd_recipient_restrictions =
     permit_mynetworks,
     reject_unauth_destination,
@@ -35,6 +38,11 @@ anvil_rate_time_unit = 60s
 
 # Sender-dependent transport for per-IP routing
 sender_dependent_default_transport_maps = hash:/etc/postfix/dynamic/sender_transport
+
+# TLS inbound (opportunistic — accept STARTTLS if client offers)
+smtpd_tls_security_level = may
+smtpd_tls_cert_file = /etc/postfix/smtpd.pem
+smtpd_tls_key_file = /etc/postfix/smtpd.key
 
 # TLS outbound
 smtp_tls_security_level = may

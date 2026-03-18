@@ -99,7 +99,10 @@ export async function authorizeDomain(request: FastifyRequest, reply: FastifyRep
 	if (apiKey.domainId === null) return;
 
 	const domainName = (request.params as Record<string, string>).domain;
-	if (!domainName) return;
+	if (!domainName) {
+		reply.code(400).send({ error: 'Domain parameter required' });
+		return;
+	}
 
 	const db = getDb();
 	const [domain] = await db
@@ -144,5 +147,6 @@ export async function requireMasterKey(
 ): Promise<void> {
 	if (!request.apiKey || request.apiKey.id !== 'master') {
 		reply.code(403).send({ error: 'Master API key required' });
+		return;
 	}
 }

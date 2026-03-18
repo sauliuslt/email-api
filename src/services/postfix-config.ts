@@ -5,6 +5,8 @@ import { env } from '../config/env.js';
 import type { Db } from '../db/connection.js';
 import { domains, ipAddresses, ipPools } from '../db/schema/index.js';
 
+const SAFE_DOMAIN = /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$/i;
+
 function transportName(identifier: string): string {
 	return `transport_${identifier.replace(/[.:@-]/g, '_')}`;
 }
@@ -47,6 +49,9 @@ export async function generatePostfixConfig(db: Db): Promise<{
 	const seenTransports = new Set<string>();
 
 	for (const domain of allDomains) {
+		// Skip domains with dangerous characters to prevent Postfix config injection
+		if (!SAFE_DOMAIN.test(domain.name)) continue;
+
 		const poolId = domain.ipPoolId ?? defaultPool?.id;
 		const ips = poolId ? poolIps.get(poolId) : undefined;
 		const ip = ips?.[0];
@@ -68,7 +73,9 @@ export async function generatePostfixConfig(db: Db): Promise<{
 	}
 
 	// Generate virtual_domains for inbound mail acceptance
-	const virtualDomainLines = allDomains.map((d) => `${d.name}\tok`);
+	const virtualDomainLines = allDomains
+		.filter((d) => SAFE_DOMAIN.test(d.name))
+		.map((d) => `${d.name}\tok`);
 
 	// Use first domain as global myhostname fallback
 	const myhostname = allDomains[0]?.name ?? null;

@@ -36,7 +36,9 @@ export async function internalRoutes(app: FastifyInstance) {
 	});
 
 	// Called by the Postfix log watcher to update delivery status
-	app.post<{ Body: DeliveryStatusBody }>('/delivery-status', async (request, reply) => {
+	app.post<{ Body: DeliveryStatusBody }>('/delivery-status', {
+		config: { rateLimit: { max: 500, timeWindow: '1 minute' } },
+	}, async (request, reply) => {
 		const db = getDb();
 		const { queueId, status, recipient, relay, dsn, response } = request.body;
 
@@ -113,7 +115,7 @@ export async function internalRoutes(app: FastifyInstance) {
 	app.post<{ Body: InboundBody }>(
 		'/inbound',
 		{
-			config: {},
+			config: { rateLimit: { max: 200, timeWindow: '1 minute' } },
 			bodyLimit: 35 * 1024 * 1024, // 35MB for large emails
 		},
 		async (request, reply) => {

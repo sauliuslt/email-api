@@ -6,9 +6,10 @@
 SENDER="$1"
 RECIPIENT="$2"
 RAW_EMAIL=$(cat | base64 -w 0)
+JSON=$(jq -n --arg s "$SENDER" --arg r "$RECIPIENT" --arg e "$RAW_EMAIL" \
+  '{sender: $s, recipient: $r, rawEmail: $e}')
 curl -s -X POST "$API_URL/internal/inbound" \
     -H "Content-Type: application/json" \
     -H "X-Internal-Secret: $INTERNAL_API_SECRET" \
-    -d "{\"sender\":\"$SENDER\",\"recipient\":\"$RECIPIENT\",\"rawEmail\":\"$RAW_EMAIL\"}" \
-    >/dev/null 2>&1
+    -d "$JSON" >/dev/null 2>&1
 exit 0

@@ -44,7 +44,7 @@ export async function buildApp() {
 	const corsOrigins = env().CORS_ORIGINS;
 	await app.register(fastifyCors, {
 		origin: corsOrigins === '*' ? true : corsOrigins.split(',').map((s) => s.trim()),
-		credentials: true,
+		credentials: corsOrigins !== '*',
 	});
 
 	await app.register(fastifyFormbody);

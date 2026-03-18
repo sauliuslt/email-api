@@ -1,7 +1,7 @@
 FROM ubuntu:24.04
 
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y postfix mailutils inotify-tools curl && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y postfix mailutils inotify-tools curl jq openssl && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY main.cf /etc/postfix/main.cf

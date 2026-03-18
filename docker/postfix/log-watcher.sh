@@ -30,14 +30,19 @@ tail -n 0 -F "$LOG_FILE" 2>/dev/null | while read -r line; do
     # Extract response text inside parentheses after status=
     RESPONSE=$(echo "$line" | sed -n 's/.*status=[a-z]* (\(.*\))/\1/p')
 
-    # Escape quotes in response for JSON
-    RESPONSE=$(echo "$RESPONSE" | sed 's/"/\\"/g')
-
     if [ -n "$QUEUE_ID" ] && [ -n "$STATUS" ]; then
+        JSON=$(jq -n \
+            --arg q "$QUEUE_ID" \
+            --arg s "$STATUS" \
+            --arg r "$RECIPIENT" \
+            --arg relay "$RELAY" \
+            --arg dsn "$DSN" \
+            --arg resp "$RESPONSE" \
+            '{queueId: $q, status: $s, recipient: $r, relay: $relay, dsn: $dsn, response: $resp}')
         curl -s -X POST "$API_URL/internal/delivery-status" \
             -H "Content-Type: application/json" \
             -H "X-Internal-Secret: $INTERNAL_API_SECRET" \
-            -d "{\"queueId\":\"$QUEUE_ID\",\"status\":\"$STATUS\",\"recipient\":\"$RECIPIENT\",\"relay\":\"$RELAY\",\"dsn\":\"$DSN\",\"response\":\"$RESPONSE\"}" \
+            -d "$JSON" \
             >/dev/null 2>&1 &
     fi
 done

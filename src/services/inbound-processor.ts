@@ -106,8 +106,20 @@ export async function processInboundEmail(
 	input: InboundEmailInput,
 ): Promise<InboundResult> {
 	// Decode and parse raw email
-	const rawBuffer = Buffer.from(input.rawEmail, 'base64');
-	const parsed = await simpleParser(rawBuffer);
+	let rawBuffer: Buffer;
+	let parsed: Awaited<ReturnType<typeof simpleParser>>;
+	try {
+		rawBuffer = Buffer.from(input.rawEmail, 'base64');
+		parsed = await simpleParser(rawBuffer);
+	} catch (err) {
+		return {
+			id: crypto.randomUUID(),
+			classification: 'unknown' as const,
+			matched: false,
+			messageId: null,
+			suppressed: false,
+		};
+	}
 
 	const classification = classifyEmail(parsed, input.recipient);
 
