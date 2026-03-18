@@ -50,6 +50,13 @@ INBOUND_EOF
     echo "Added inbound-pipe transport to master.cf"
 fi
 
+# Write environment for inbound handler (Postfix pipe daemon strips env)
+cat > /etc/inbound-env <<EOF
+API_URL="${API_URL:-http://email-api:3000}"
+INTERNAL_API_SECRET="${INTERNAL_API_SECRET}"
+EOF
+chmod 644 /etc/inbound-env
+
 # Apply initial config
 apply_config
 

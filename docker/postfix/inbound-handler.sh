@@ -1,5 +1,8 @@
 #!/bin/bash
 # Receives piped email from Postfix virtual transport and forwards to API
+# Source env vars (Postfix pipe daemon doesn't inherit container environment)
+. /etc/inbound-env
+
 SENDER="$1"
 RECIPIENT="$2"
 RAW_EMAIL=$(cat | base64 -w 0)
