@@ -38,7 +38,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
 					.code(400)
 					.send({ error: result.error.issues[0]?.message ?? 'Validation failed' });
 			}
-			const { from, to, subject, text, html } = result.data;
+			const { from, fromName, to, subject, text, html } = result.data;
 
 			if (!text && !html) {
 				return reply.code(400).send({ error: 'Either text or html body is required' });
@@ -51,7 +51,7 @@ export async function messageRoutes(app: FastifyInstance): Promise<void> {
 			}
 
 			const db = getDb();
-			const msg = await enqueueMessage(db, domain, { from, to, subject, text, html });
+			const msg = await enqueueMessage(db, domain, { from, fromName, to, subject, text, html });
 
 			reply.code(202).send({
 				message: 'Queued. Thank you.',

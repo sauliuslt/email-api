@@ -40,7 +40,7 @@ export async function enqueueMessage(
 	await db.insert(messages).values({
 		id,
 		domainId: domain.id,
-		from: payload.from,
+		from: payload.fromName ? `${payload.fromName} <${payload.from}>` : payload.from,
 		to,
 		subject: payload.subject,
 		textBody: payload.text,

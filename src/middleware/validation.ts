@@ -17,6 +17,7 @@ export const emailSchema = z
 
 export const sendMessageSchema = z.object({
 	from: emailSchema,
+	fromName: z.string().max(255).optional(),
 	to: emailSchema,
 	subject: z.string().min(1).max(998),
 	text: z.string().max(512_000).optional(),
