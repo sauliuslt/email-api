@@ -6,7 +6,7 @@ biff = no
 # Network — accept on all interfaces for inbound mail
 inet_interfaces = all
 inet_protocols = ipv4
-mynetworks = 127.0.0.0/8
+mynetworks = 127.0.0.0/8, 172.16.0.0/12
 
 # General
 myhostname = mail.localhost
