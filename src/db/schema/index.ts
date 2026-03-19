@@ -100,7 +100,7 @@ export const messages = mysqlTable('messages', {
 	status: mysqlEnum('status', ['queued', 'sending', 'delivered', 'bounced', 'failed', 'rejected'])
 		.notNull()
 		.default('queued'),
-	ipAddressId: varchar('ip_address_id', { length: 36 }).references(() => ipAddresses.id),
+	ipAddressId: varchar('ip_address_id', { length: 36 }).references(() => ipAddresses.id, { onDelete: 'set null' }),
 	messageIdHeader: varchar('message_id_header', { length: 255 }),
 	postfixQueueId: varchar('postfix_queue_id', { length: 255 }),
 	smtpResponse: text('smtp_response'),

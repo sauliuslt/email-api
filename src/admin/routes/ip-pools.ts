@@ -1,7 +1,7 @@
 import { desc, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { getDb } from '../../db/connection.js';
-import { ipAddresses, ipPools } from '../../db/schema/index.js';
+import { ipAddresses, ipPools, messages } from '../../db/schema/index.js';
 import { checkAllDnsbl } from '../../services/dnsbl.js';
 import { writePostfixConfig } from '../../services/postfix-config.js';
 import { reverseDnsLookup } from '../../services/reverse-dns.js';
@@ -139,6 +139,7 @@ export async function ipPoolRoutes(app: FastifyInstance) {
 		'/ip-pools/:poolId/ips/:ipId/delete',
 		async (request, reply) => {
 			const db = getDb();
+			await db.update(messages).set({ ipAddressId: null }).where(eq(messages.ipAddressId, request.params.ipId));
 			await db.delete(ipAddresses).where(eq(ipAddresses.id, request.params.ipId));
 			await writePostfixConfig(db);
 			request.session.set('flash', { type: 'success', message: 'IP removed' });
