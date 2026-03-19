@@ -2,8 +2,11 @@ import { desc, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { getDb } from '../../db/connection.js';
 import { apiKeys, domains } from '../../db/schema/index.js';
+import { PERMISSIONS } from '../../middleware/auth.js';
 import { generateApiKey } from '../../utils/crypto.js';
 import { getFlash, requireAdmin } from '../middleware/admin-auth.js';
+
+const allPermissions = Object.values(PERMISSIONS);
 
 export async function apiKeyRoutes(app: FastifyInstance) {
 	app.addHook('onRequest', requireAdmin);
@@ -40,16 +43,23 @@ export async function apiKeyRoutes(app: FastifyInstance) {
 			keys,
 			domains: allDomains,
 			newKey: newKey ?? null,
+			allPermissions,
 		});
 	});
 
-	app.post<{ Body: { name: string; domainId?: string } }>('/api-keys', async (request, reply) => {
+	app.post<{ Body: { name: string; domainId?: string; permissions?: string | string[] } }>('/api-keys', async (request, reply) => {
 		const { name, domainId } = request.body;
 
 		if (!name) {
 			request.session.set('flash', { type: 'error', message: 'Name is required' });
 			return reply.redirect('/admin/api-keys');
 		}
+
+		// Parse permissions from form (checkboxes submit string if one, array if multiple)
+		const rawPerms = request.body.permissions;
+		const perms = rawPerms
+			? (Array.isArray(rawPerms) ? rawPerms : [rawPerms]).filter((p) => allPermissions.includes(p as any))
+			: [];
 
 		const { key, prefix, hash } = generateApiKey();
 		const db = getDb();
@@ -59,7 +69,7 @@ export async function apiKeyRoutes(app: FastifyInstance) {
 			keyPrefix: prefix,
 			keyHash: hash,
 			domainId: domainId || null,
-			permissions: [],
+			permissions: perms,
 		});
 
 		request.session.set('flash', {

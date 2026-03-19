@@ -32,6 +32,18 @@
         <% }); %>
       </select>
     </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
+      <div class="grid grid-cols-2 gap-2">
+        <% allPermissions.forEach(function(p) { %>
+          <label class="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox" name="permissions" value="<%= p %>" class="rounded border-gray-300 text-gray-900 focus:ring-gray-900">
+            <span class="font-mono text-xs"><%= p %></span>
+          </label>
+        <% }); %>
+      </div>
+      <p class="text-xs text-gray-500 mt-1">Leave all unchecked to create a key with no permissions.</p>
+    </div>
     <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-800">Create</button>
   </form>
 </div>
