@@ -1,4 +1,3 @@
-import os from 'node:os';
 import { desc, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { getDb } from '../../db/connection.js';
@@ -7,20 +6,6 @@ import { checkAllDnsbl } from '../../services/dnsbl.js';
 import { writePostfixConfig } from '../../services/postfix-config.js';
 import { reverseDnsLookup } from '../../services/reverse-dns.js';
 import { getFlash, requireAdmin } from '../middleware/admin-auth.js';
-
-function getSystemIpv4Addresses(): string[] {
-	const interfaces = os.networkInterfaces();
-	const ips: string[] = [];
-	for (const iface of Object.values(interfaces)) {
-		if (!iface) continue;
-		for (const addr of iface) {
-			if (addr.family === 'IPv4' && !addr.internal) {
-				ips.push(addr.address);
-			}
-		}
-	}
-	return ips;
-}
 
 export async function ipPoolRoutes(app: FastifyInstance) {
 	app.addHook('onRequest', requireAdmin);
@@ -71,14 +56,6 @@ export async function ipPoolRoutes(app: FastifyInstance) {
 			ptrResults[r.id] = { ptrRecords: r.ptrRecords, error: r.error };
 		}
 
-		// Get all IPs already assigned to any pool
-		const allAssignedIps = await db.select({ address: ipAddresses.address }).from(ipAddresses);
-		const assignedSet = new Set(allAssignedIps.map((ip) => ip.address));
-
-		// Get system IPs and filter out already-assigned ones
-		const systemIps = getSystemIpv4Addresses();
-		const availableIps = systemIps.filter((ip) => !assignedSet.has(ip));
-
 		const flash = getFlash(request);
 		return reply.view('ip-pools/detail.ejs', {
 			currentPath: '/ip-pools',
@@ -86,7 +63,6 @@ export async function ipPoolRoutes(app: FastifyInstance) {
 			pool,
 			ips,
 			ptrResults,
-			availableIps,
 		});
 	});
 
@@ -123,16 +99,6 @@ export async function ipPoolRoutes(app: FastifyInstance) {
 			}
 
 			const trimmedAddress = address.trim();
-
-			// Validate IP is actually on this system
-			const systemIps = getSystemIpv4Addresses();
-			if (!systemIps.includes(trimmedAddress)) {
-				request.session.set('flash', {
-					type: 'error',
-					message: `IP ${trimmedAddress} is not configured on this server`,
-				});
-				return reply.redirect(`/admin/ip-pools/${request.params.id}`);
-			}
 
 			// Validate IP is not already assigned to another pool
 			const db = getDb();

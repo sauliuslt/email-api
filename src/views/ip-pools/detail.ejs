@@ -19,25 +19,16 @@
 
 <div class="mb-6 bg-white rounded-lg shadow p-6">
   <h3 class="text-lg font-medium text-gray-900 mb-4">Add IP Address</h3>
-  <% if (availableIps.length > 0) { %>
   <form method="POST" action="/admin/ip-pools/<%= pool.id %>/ips" class="flex items-end gap-4">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="flex-1">
       <label for="address" class="block text-sm font-medium text-gray-700 mb-1">IP Address</label>
-      <select id="address" name="address" required
+      <input type="text" id="address" name="address" required placeholder="95.216.180.93"
         class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-gray-900">
-        <option value="">Select an IP address</option>
-        <% availableIps.forEach(function(ip) { %>
-          <option value="<%= ip %>"><%= ip %></option>
-        <% }); %>
-      </select>
     </div>
     <button type="submit" class="bg-gray-900 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-800">Add IP</button>
   </form>
-  <p class="text-xs text-gray-500 mt-2">Showing IPs configured on this server that are not assigned to any pool. Reverse DNS (PTR record) will be looked up automatically.</p>
-  <% } else { %>
-  <p class="text-sm text-gray-500">No available IPs. All server IPs are already assigned to pools, or no external IPv4 addresses are configured on this server.</p>
-  <% } %>
+  <p class="text-xs text-gray-500 mt-2">Enter an IPv4 address bound on this server. Reverse DNS (PTR record) will be looked up automatically. IPs already assigned to another pool will be rejected.</p>
 </div>
 
 <div class="bg-white rounded-lg shadow overflow-x-auto">
