@@ -140,8 +140,11 @@ export function createSendWorker(): Worker<SendJobData> {
 
 			// Append unsubscribe footer to email body
 			const unsubMailto = `mailto:${unsubAddress}?subject=unsubscribe`;
-			const textFooter = `\n\n---\nIf you don't want to receive emails from this sender, unsubscribe by sending an email to ${unsubAddress}`;
-			const htmlFooter = `<div style="margin-top:32px;padding-top:16px;border-top:1px solid #e5e5e5;font-size:12px;color:#999;text-align:center">If you don't want to receive emails from this sender, <a href="${unsubMailto}" style="color:#999">click here to unsubscribe</a>.</div>`;
+			const footerAddress = env().MAIL_FOOTER_ADDRESS;
+			const addressLine = footerAddress ? `\n${footerAddress}` : '';
+			const addressHtml = footerAddress ? `<br>${footerAddress.replace(/\n/g, '<br>')}` : '';
+			const textFooter = `\n\n---\nIf you don't want to receive emails from this sender, unsubscribe by sending an email to ${unsubAddress}${addressLine}`;
+			const htmlFooter = `<div style="margin-top:32px;padding-top:16px;border-top:1px solid #e5e5e5;font-size:12px;color:#999;text-align:center">If you don't want to receive emails from this sender, <a href="${unsubMailto}" style="color:#999">click here to unsubscribe</a>.${addressHtml}</div>`;
 
 			const textBody = message.textBody ? message.textBody + textFooter : undefined;
 			let htmlBody = message.htmlBody ?? undefined;

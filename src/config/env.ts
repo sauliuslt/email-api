@@ -64,6 +64,7 @@ const envSchema = z
 		ADMIN_PASSWORD: z.string().min(8).optional(),
 		ADMIN_PASSWORD_HASH: z.string().optional(),
 		SESSION_SECRET: z.string().min(32),
+		MAIL_FOOTER_ADDRESS: z.string().optional(),
 	})
 	.refine((data) => data.ADMIN_PASSWORD || data.ADMIN_PASSWORD_HASH, {
 		message: 'Either ADMIN_PASSWORD or ADMIN_PASSWORD_HASH must be set',
