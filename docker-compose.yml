@@ -76,6 +76,9 @@ services:
       DNS_RESOLVER: email-unbound
     volumes:
       - postfix-config:/app/config/postfix
+    networks:
+      - default
+      - email-api-network
     depends_on:
       email-mysql:
         condition: service_healthy
@@ -109,3 +112,7 @@ services:
 
 volumes:
   postfix-config:
+
+networks:
+  email-api-network:
+    name: email-api-network
